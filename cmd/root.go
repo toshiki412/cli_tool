@@ -60,6 +60,6 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
-	err = viper.Unmarshal(&config)
+	err := viper.Unmarshal(&config)
 	cobra.CheckErr(err)
 }
