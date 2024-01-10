@@ -1,6 +1,7 @@
 - goのインストールをする
 
-- モジュール作成
+- Hello worldまで
+モジュールの作成
 $ go mod init url
     $ go mod init github.com/toshiki412/cli_tool
 go.modが作成される
@@ -15,8 +16,8 @@ func main() {
 $ go run .
 Hello worldが出力
 
+- 依存関係更新
 $ go mod tidy
-依存関係を見に行って更新してくれる
 
 - cobraのインストール
 go install github.com/spf13/cobra-cli@latest
@@ -28,3 +29,6 @@ $ ~/go/bin/cobra-cli init
 
 通している場合は
 $ cobra-cli init
+
+- サブコマンドの追加
+$ cobra-cli add subcommand_name
