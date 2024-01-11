@@ -1,13 +1,17 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
+	"os"
 
+	"github.com/JamesStewy/go-mysqldump"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
+	"github.com/toshiki412/cli_tool/cfg"
 )
 
 // pushCmd represents the push command
@@ -24,6 +28,10 @@ to quickly create a Cobra application.`,
 		fmt.Println("push called", config)
 		if config.Target.Kind == "mysql" {
 			// TargetMysqlConfigTypeに変換する
+			var conf cfg.TargetMysqlConfigType
+			err := mapstructure.Decode(config.Target.Config, &conf)
+			cobra.CheckErr(err)
+			fmt.Println(conf)
 			// dbダンプ
 		}
 	},
@@ -32,13 +40,27 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(pushCmd)
 
-	// Here you will define your flags and configuration settings.
+}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pushCmd.PersistentFlags().String("foo", "", "A help for foo")
+func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
+	dumpDir, err := os.MkdirTemp("", ".cli_tool")
+	dumpFileNameFormat := fmt.Sprintf("%s-20060102150405", conf.Database)
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pushCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	dns := fmt.Sprintf("%s:%s@%s:%d/%s", conf.User, conf.Password, conf.Host, conf.Port, conf.Database)
+	db, err := sql.Open("mysql", dns)
+	cobra.CheckErr(err)
+
+	// register database with mysqldump
+	dumper, err := mysqldump.Register(db, dumpDir, dumpFileNameFormat)
+	cobra.CheckErr(err)
+
+	// dump database to file
+	resultFileName, err := dumper.Dump()
+	cobra.CheckErr(err)
+
+	fmt.Printf("successfully dumped to file %s\n", resultFileName)
+
+	dumper.Close()
+
+	return resultFileName
 }

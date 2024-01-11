@@ -1,20 +1,20 @@
 package cfg // フォルダ名
 
-type TragetMysqlConfigType struct {
-	Host string
-	Port int
-	User string
+type TargetMysqlConfigType struct {
+	Host     string
+	Port     int
+	User     string
 	Password string
 	Database string
 }
 
 type TargetType struct {
-	Kind string
+	Kind   string
 	Config interface{}
 }
 
 type UploadType struct {
-	Kind string
+	Kind   string
 	Config interface{}
 }
 
