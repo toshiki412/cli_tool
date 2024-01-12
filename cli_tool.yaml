@@ -8,4 +8,7 @@ target:
     database: sample
 
 upload:
-  kind: s3
+  kind: gcs
+  config:
+    bucket: clitoolbacket0001
+    dir: "test01/test02"
