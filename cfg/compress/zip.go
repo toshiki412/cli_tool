@@ -2,6 +2,7 @@ package compress
 
 import (
 	"archive/zip"
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,10 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// 圧縮
-func Compress(writer io.Writer, target string) error {
-	zipWriter := zip.NewWriter(writer)
-	defer zipWriter.Close()
+// 圧縮   targetを圧縮して、圧縮したファイルのパスを返す
+func Compress(target string) string {
+	var buffer bytes.Buffer
+	zipWriter := zip.NewWriter(&buffer)
 
 	isDir := isDirectory(target)
 
@@ -23,8 +24,22 @@ func Compress(writer io.Writer, target string) error {
 		fileName := filepath.Base(target)
 		addZipFile(zipWriter, target, fileName)
 	}
+	err := zipWriter.Close()
+	cobra.CheckErr(err)
 
-	return nil
+	dumpDir, err := os.MkdirTemp("", ".cli_tool")
+	cobra.CheckErr(err)
+
+	zipfile := filepath.Join(dumpDir, "test.zip")
+
+	file, err := os.Create(zipfile)
+	cobra.CheckErr(err)
+	defer file.Close()
+
+	_, err = file.Write(buffer.Bytes())
+	cobra.CheckErr(err)
+
+	return zipfile
 }
 
 func isDirectory(path string) bool {

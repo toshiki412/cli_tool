@@ -1,6 +1,5 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -8,14 +7,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/toshiki412/cli_tool/cfg"
 )
 
 var (
 	configFile string
-	config     cfg.ConfigType
+	setting    cfg.SettingType
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -60,6 +59,6 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
-	err := viper.Unmarshal(&config)
+	err := viper.Unmarshal(&setting)
 	cobra.CheckErr(err)
 }

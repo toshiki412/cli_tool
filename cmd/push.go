@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/aliakseiz/go-mysqldump"
@@ -16,6 +17,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
+	"github.com/toshiki412/cli_tool/cfg/compress"
 )
 
 // pushCmd represents the push command
@@ -29,22 +31,28 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("push called", config)
-		if config.Target.Kind == "mysql" {
+		fmt.Println("push called", setting)
+		if setting.Target.Kind == "mysql" {
 			// TargetMysqlConfigTypeに変換する
-			var conf cfg.TargetMysqlConfigType
-			err := mapstructure.Decode(config.Target.Config, &conf)
+			var conf cfg.TargetMysqlType
+			err := mapstructure.Decode(setting.Target.Config, &conf)
 			cobra.CheckErr(err)
-			fmt.Println(conf)
 
 			// dbダンプ
-			dumpdir := processMysqlDump(conf)
-			fmt.Println(dumpdir)
+			dumpDir, err := os.MkdirTemp("", ".cli_tool")
+			cobra.CheckErr(err)
+			processMysqlDump(dumpDir, conf)
 
 			// zip圧縮
+			zipfile := compress.Compress(dumpDir)
 
 			// アップロード
-			uploadGoogleStorage()
+			var gcsConf cfg.UploadGoogleStorageType
+			err = mapstructure.Decode(setting.Upload.Config, &gcsConf)
+			cobra.CheckErr(err)
+			uploadGoogleStorage(zipfile, gcsConf)
+
+			fmt.Println("pushed to google storage!")
 		}
 	},
 }
@@ -54,7 +62,7 @@ func init() {
 
 }
 
-func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
+func processMysqlDump(dumpDir string, conf cfg.TargetMysqlType) {
 	config := mysql.NewConfig()
 	config.User = conf.User
 	config.Passwd = conf.Password
@@ -62,10 +70,7 @@ func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
 	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
 	config.DBName = conf.Database
 
-	dumpDir, err := os.MkdirTemp("", ".cli_tool")
-	cobra.CheckErr(err)
-
-	dumpFileNameFormat := fmt.Sprintf("%s-20060102150405", conf.Database)
+	dumpFileNameFormat := fmt.Sprintf("%s-%s", "mysql", conf.Database)
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
@@ -78,33 +83,33 @@ func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
 	err = dumper.Dump()
 	cobra.CheckErr(err)
 
-	fmt.Printf("successfully dumped to file %s\n", dumpFileNameFormat)
+	fmt.Println("successfully dumped to file.")
 
 	dumper.Close()
-
-	return dumpDir
 }
 
-func uploadGoogleStorage() {
+func uploadGoogleStorage(target string, conf cfg.UploadGoogleStorageType) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
 	defer client.Close()
 
-	f, err := os.Open("Readme.md")
+	f, err := os.Open(target)
 	cobra.CheckErr(err)
 	defer f.Close()
 
-	// ctx, cancel := context.WithTimeout(ctx, time.Second*50)
-	// defer cancel()
+	var uploadpath = ""
+	if conf.Dir == "" {
+		uploadpath = "upload.zip"
+	} else {
+		uploadpath = filepath.Join(conf.Dir, "upload.zip")
+	}
 
-	o := client.Bucket("clitoolbacket0001").Object("Readme.md")
-	// o = o.If(storage.Conditions{DoesNotExist: true})
+	o := client.Bucket(conf.Bucket).Object(uploadpath)
 
 	wc := o.NewWriter(ctx)
 	_, err = io.Copy(wc, f)
 	cobra.CheckErr(err)
 	err = wc.Close()
 	cobra.CheckErr(err)
-
 }
