@@ -4,10 +4,14 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
+	"cloud.google.com/go/storage"
 	"github.com/aliakseiz/go-mysqldump"
 	"github.com/go-sql-driver/mysql"
 	"github.com/mitchellh/mapstructure"
@@ -35,7 +39,11 @@ to quickly create a Cobra application.`,
 			fmt.Println(conf)
 
 			// dbダンプ
-			processMysqlDump(conf)
+			dumpfile := processMysqlDump(conf)
+			fmt.Println(dumpfile)
+
+			// アップロード
+			uploadGoogleStorage()
 		}
 	},
 }
@@ -73,5 +81,29 @@ func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
 
 	dumper.Close()
 
-	return dumpFileNameFormat
+	return filepath.Join(dumpDir, dumpFileNameFormat+".sql")
+}
+
+func uploadGoogleStorage() {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	cobra.CheckErr(err)
+	defer client.Close()
+
+	f, err := os.Open("Readme.md")
+	cobra.CheckErr(err)
+	defer f.Close()
+
+	// ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	// defer cancel()
+
+	o := client.Bucket("clitoolbacket0001").Object("Readme.md")
+	// o = o.If(storage.Conditions{DoesNotExist: true})
+
+	wc := o.NewWriter(ctx)
+	_, err = io.Copy(wc, f)
+	cobra.CheckErr(err)
+	err = wc.Close()
+	cobra.CheckErr(err)
+
 }

@@ -9,3 +9,5 @@ target:
 
 upload:
   kind: s3
+  config:
+    a: 10
