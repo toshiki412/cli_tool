@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/aliakseiz/go-mysqldump"
@@ -39,8 +38,10 @@ to quickly create a Cobra application.`,
 			fmt.Println(conf)
 
 			// dbダンプ
-			dumpfile := processMysqlDump(conf)
-			fmt.Println(dumpfile)
+			dumpdir := processMysqlDump(conf)
+			fmt.Println(dumpdir)
+
+			// zip圧縮
 
 			// アップロード
 			uploadGoogleStorage()
@@ -81,7 +82,7 @@ func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
 
 	dumper.Close()
 
-	return filepath.Join(dumpDir, dumpFileNameFormat+".sql")
+	return dumpDir
 }
 
 func uploadGoogleStorage() {
