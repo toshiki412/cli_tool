@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/JamesStewy/go-mysqldump"
+	"github.com/aliakseiz/go-mysqldump"
+	"github.com/go-sql-driver/mysql"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
@@ -32,7 +33,9 @@ to quickly create a Cobra application.`,
 			err := mapstructure.Decode(config.Target.Config, &conf)
 			cobra.CheckErr(err)
 			fmt.Println(conf)
+
 			// dbダンプ
+			processMysqlDump(conf)
 		}
 	},
 }
@@ -43,24 +46,32 @@ func init() {
 }
 
 func processMysqlDump(conf cfg.TargetMysqlConfigType) string {
+	config := mysql.NewConfig()
+	config.User = conf.User
+	config.Passwd = conf.Password
+	config.Net = "tcp"
+	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
+	config.DBName = conf.Database
+
 	dumpDir, err := os.MkdirTemp("", ".cli_tool")
+	cobra.CheckErr(err)
+
 	dumpFileNameFormat := fmt.Sprintf("%s-20060102150405", conf.Database)
 
-	dns := fmt.Sprintf("%s:%s@%s:%d/%s", conf.User, conf.Password, conf.Host, conf.Port, conf.Database)
-	db, err := sql.Open("mysql", dns)
+	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
 	// register database with mysqldump
-	dumper, err := mysqldump.Register(db, dumpDir, dumpFileNameFormat)
+	dumper, err := mysqldump.Register(db, dumpDir, dumpFileNameFormat, config.DBName)
 	cobra.CheckErr(err)
 
 	// dump database to file
-	resultFileName, err := dumper.Dump()
+	err = dumper.Dump()
 	cobra.CheckErr(err)
 
-	fmt.Printf("successfully dumped to file %s\n", resultFileName)
+	fmt.Printf("successfully dumped to file %s\n", dumpFileNameFormat)
 
 	dumper.Close()
 
-	return resultFileName
+	return dumpFileNameFormat
 }

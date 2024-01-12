@@ -3,7 +3,7 @@ module github.com/toshiki412/cli_tool
 go 1.20
 
 require (
-	github.com/JamesStewy/go-mysqldump v0.2.2
+	github.com/aliakseiz/go-mysqldump v1.0.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
