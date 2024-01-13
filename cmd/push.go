@@ -32,8 +32,6 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("push called", setting)
-
 		// dbダンプ
 		dumpDir, err := os.MkdirTemp("", ".cli_tool")
 		cobra.CheckErr(err)
@@ -49,21 +47,18 @@ to quickly create a Cobra application.`,
 
 		_uuid, err := uuid.NewRandom()
 		cobra.CheckErr(err)
-		uuid := _uuid.String()
-		uuid = strings.Replace(uuid, "-", "", -1)
-		uuidWithZip := fmt.Sprintf("%s.zip", uuid)
+		versionId := _uuid.String()
+		versionId = strings.Replace(versionId, "-", "", -1)
 
 		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
 			Gcs: func(conf cfg.StorageGoogleStorageType) {
 				// アップロード
-				storage.Upload(zipfile, uuidWithZip, conf)
-
-				fmt.Println("pushed to google storage!")
+				storage.Upload(zipfile, fmt.Sprintf("%s.zip", versionId), conf)
 
 				nowTime := time.Now()
 
 				v := cfg.VersionType{
-					Id:      uuid,
+					Id:      versionId,
 					Time:    nowTime.Unix(),
 					Message: pushMessage,
 				}
@@ -99,6 +94,7 @@ to quickly create a Cobra application.`,
 				}
 			},
 		})
+		fmt.Printf("pushed successfully! version_id: %s\n", versionId)
 	},
 }
 

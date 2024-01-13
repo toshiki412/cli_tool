@@ -3,6 +3,7 @@ package dump
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 
 	"github.com/aliakseiz/go-mysqldump"
 	"github.com/go-sql-driver/mysql"
@@ -19,13 +20,13 @@ func Dump(dumpDir string, conf cfg.TargetMysqlType) {
 	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
 	config.DBName = conf.Database
 
-	dumpFileNameFormat := fmt.Sprintf("%s-%s", "mysql", conf.Database)
+	dumpFileName := fmt.Sprintf("%s-%s", "mysql", conf.Database)
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
 	// register database with mysqldump
-	dumper, err := mysqldump.Register(db, dumpDir, dumpFileNameFormat, config.DBName)
+	dumper, err := mysqldump.Register(db, dumpDir, dumpFileName, config.DBName)
 	cobra.CheckErr(err)
 
 	// dump database to file
@@ -37,7 +38,7 @@ func Dump(dumpDir string, conf cfg.TargetMysqlType) {
 	dumper.Close()
 }
 
-func Import(dumpFile string, conf cfg.TargetMysqlType) {
+func Import(dumpDir string, conf cfg.TargetMysqlType) {
 	config := mysql.NewConfig()
 	config.User = conf.User
 	config.Passwd = conf.Password
@@ -47,6 +48,9 @@ func Import(dumpFile string, conf cfg.TargetMysqlType) {
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
+
+	dumpFileName := fmt.Sprintf("%s-%s.sql", "mysql", conf.Database)
+	dumpFile := filepath.Join(dumpDir, dumpFileName)
 
 	s := sqlfile.New()
 	err = s.File(dumpFile)
