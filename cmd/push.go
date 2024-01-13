@@ -15,7 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/cfg/compress"
-	"github.com/toshiki412/cli_tool/dump"
+	"github.com/toshiki412/cli_tool/dump/dump_file"
+	"github.com/toshiki412/cli_tool/dump/dump_mysql"
 	"github.com/toshiki412/cli_tool/file"
 	"github.com/toshiki412/cli_tool/storage"
 )
@@ -38,11 +39,16 @@ to quickly create a Cobra application.`,
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
 
-		cfg.DispatchTarget(setting.Target, cfg.TargetFuncTable{
-			Mysql: func(conf cfg.TargetMysqlType) {
-				dump.Dump(dumpDir, conf)
-			},
-		})
+		for _, target := range setting.Targets {
+			cfg.DispatchTarget(target, cfg.TargetFuncTable{
+				Mysql: func(conf cfg.TargetMysqlType) {
+					dump_mysql.Dump(dumpDir, conf)
+				},
+				File: func(conf cfg.TargetFileType) {
+					dump_file.Dump(dumpDir, conf)
+				},
+			})
+		}
 
 		// zip圧縮
 		zipfile := compress.Compress(dumpDir)
@@ -99,6 +105,7 @@ to quickly create a Cobra application.`,
 				}
 			},
 		})
+		// TODO .cli_tool_versionを更新する
 		fmt.Printf("pushed successfully! version_id: %s\n", versionId)
 	},
 }

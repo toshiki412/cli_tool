@@ -12,6 +12,11 @@ func DispatchTarget(target TargetType, table TargetFuncTable) {
 		err := mapstructure.Decode(target.Config, &conf)
 		cobra.CheckErr(err)
 		table.Mysql(conf)
+	case "file":
+		var conf TargetFileType
+		err := mapstructure.Decode(target.Config, &conf)
+		cobra.CheckErr(err)
+		table.File(conf)
 	default:
 		panic("unknown target kind")
 	}

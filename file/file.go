@@ -24,7 +24,7 @@ func MakeTempDir() (string, error) {
 	return os.MkdirTemp("", ".cli_tool")
 }
 
-func findCurrentDir() (string, error) {
+func FindCurrentDir() (string, error) {
 	p, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -36,19 +36,21 @@ func findCurrentDir() (string, error) {
 }
 
 func searchFile(dir string, filename string) (string, error) {
+	// ルートディレクトリに到達したらエラー
 	if dir == filepath.Dir(dir) {
 		return "", fmt.Errorf("file not found")
 	}
+
 	p := filepath.Join(dir, filename)
 	_, err := os.Stat(p)
-	if err == nil {
+	if err != nil {
 		return searchFile(filepath.Dir(dir), filename) // さらに上の階層を探す
 	}
 	return dir, nil
 }
 
 func ReadVersionFile() (string, error) {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return "", err
@@ -61,7 +63,7 @@ func ReadVersionFile() (string, error) {
 }
 
 func UpdateVersionFile(versionId string) error {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return err
@@ -70,7 +72,7 @@ func UpdateVersionFile(versionId string) error {
 }
 
 func DataDir() (string, error) {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	if err != nil {
 		return "", err
 	}

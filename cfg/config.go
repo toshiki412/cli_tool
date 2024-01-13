@@ -8,6 +8,10 @@ type TargetMysqlType struct {
 	Database string
 }
 
+type TargetFileType struct {
+	Path string
+}
+
 type TargetType struct {
 	Kind   string
 	Config interface{}
@@ -24,7 +28,7 @@ type StorageType struct {
 }
 
 type SettingType struct {
-	Target  TargetType // 頭文字を大文字にすることで、外部からアクセス可能になる. 小文字だとプライベートになる
+	Targets []TargetType // 頭文字を大文字にすることで、外部からアクセス可能になる. 小文字だとプライベートになる
 	Storage StorageType
 }
 
@@ -35,8 +39,10 @@ type VersionType struct {
 }
 
 type TargetMysqlFunc func(config TargetMysqlType) // 関数型
+type TargetFileFunc func(config TargetFileType)
 type TargetFuncTable struct {
 	Mysql TargetMysqlFunc
+	File  TargetFileFunc
 }
 
 type StorageGoogleStorageFunc func(config StorageGoogleStorageType)
