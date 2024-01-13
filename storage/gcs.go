@@ -11,7 +11,7 @@ import (
 	"github.com/toshiki412/cli_tool/cfg"
 )
 
-func Upload(target string, filename string, conf cfg.UploadGoogleStorageType) {
+func Upload(target string, filename string, conf cfg.StorageGoogleStorageType) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
@@ -37,7 +37,7 @@ func Upload(target string, filename string, conf cfg.UploadGoogleStorageType) {
 	cobra.CheckErr(err)
 }
 
-func Download(target string, conf cfg.UploadGoogleStorageType) string {
+func Download(target string, conf cfg.StorageGoogleStorageType) string {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
@@ -71,7 +71,7 @@ func Download(target string, conf cfg.UploadGoogleStorageType) string {
 	return tmpfile
 }
 
-func IsExist(target string, conf cfg.UploadGoogleStorageType) bool {
+func IsExist(target string, conf cfg.StorageGoogleStorageType) bool {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
