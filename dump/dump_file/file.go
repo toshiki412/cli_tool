@@ -32,6 +32,6 @@ func Expand(dumpDir string, conf cfg.TargetFileType) {
 	err = os.MkdirAll(dest, os.ModePerm)
 	cobra.CheckErr(err)
 
-	err = cp.Copy(src, cwd)
+	err = cp.Copy(src, dest)
 	cobra.CheckErr(err)
 }
