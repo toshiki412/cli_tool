@@ -4,21 +4,23 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"context"
-	"database/sql"
+	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
-	"cloud.google.com/go/storage"
-	"github.com/aliakseiz/go-mysqldump"
-	"github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/cfg/compress"
+	"github.com/toshiki412/cli_tool/dump"
+	"github.com/toshiki412/cli_tool/storage"
 )
+
+var pushMessage string
 
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
@@ -41,7 +43,7 @@ to quickly create a Cobra application.`,
 			// dbダンプ
 			dumpDir, err := os.MkdirTemp("", ".cli_tool")
 			cobra.CheckErr(err)
-			processMysqlDump(dumpDir, conf)
+			dump.Dump(dumpDir, conf)
 
 			// zip圧縮
 			zipfile := compress.Compress(dumpDir)
@@ -50,9 +52,54 @@ to quickly create a Cobra application.`,
 			var gcsConf cfg.UploadGoogleStorageType
 			err = mapstructure.Decode(setting.Upload.Config, &gcsConf)
 			cobra.CheckErr(err)
-			uploadGoogleStorage(zipfile, gcsConf)
+
+			_uuid, err := uuid.NewRandom()
+			cobra.CheckErr(err)
+			uuid := _uuid.String()
+			uuid = strings.Replace(uuid, "-", "", -1)
+			uuidWithZip := fmt.Sprintf("%s.zip", uuid)
+
+			storage.Upload(zipfile, uuidWithZip, gcsConf)
 
 			fmt.Println("pushed to google storage!")
+
+			nowTime := time.Now()
+
+			v := cfg.VersionType{
+				Id:      uuid,
+				Time:    nowTime.Unix(),
+				Message: pushMessage,
+			}
+
+			b, err := json.Marshal(v)
+			cobra.CheckErr(err)
+			version := string(b)
+
+			if storage.IsExist(".cli_tool", gcsConf) {
+				filePath := storage.Download(".cli_tool", gcsConf)
+				f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+				cobra.CheckErr(err)
+				defer f.Close()
+
+				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+				cobra.CheckErr(err)
+				err = f.Close()
+				cobra.CheckErr(err)
+
+				storage.Upload(filePath, ".cli_tool", gcsConf)
+			} else {
+				tmpDir, err := os.MkdirTemp("", ".cli_tool")
+				cobra.CheckErr(err)
+
+				tmpFile := filepath.Join(tmpDir, ".cli_tool")
+				f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
+				cobra.CheckErr(err)
+				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+				cobra.CheckErr(err)
+				err = f.Close()
+				cobra.CheckErr(err)
+				storage.Upload(tmpFile, ".cli_tool", gcsConf)
+			}
 		}
 	},
 }
@@ -60,56 +107,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(pushCmd)
 
-}
-
-func processMysqlDump(dumpDir string, conf cfg.TargetMysqlType) {
-	config := mysql.NewConfig()
-	config.User = conf.User
-	config.Passwd = conf.Password
-	config.Net = "tcp"
-	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
-	config.DBName = conf.Database
-
-	dumpFileNameFormat := fmt.Sprintf("%s-%s", "mysql", conf.Database)
-
-	db, err := sql.Open("mysql", config.FormatDSN())
-	cobra.CheckErr(err)
-
-	// register database with mysqldump
-	dumper, err := mysqldump.Register(db, dumpDir, dumpFileNameFormat, config.DBName)
-	cobra.CheckErr(err)
-
-	// dump database to file
-	err = dumper.Dump()
-	cobra.CheckErr(err)
-
-	fmt.Println("successfully dumped to file.")
-
-	dumper.Close()
-}
-
-func uploadGoogleStorage(target string, conf cfg.UploadGoogleStorageType) {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	cobra.CheckErr(err)
-	defer client.Close()
-
-	f, err := os.Open(target)
-	cobra.CheckErr(err)
-	defer f.Close()
-
-	var uploadpath = ""
-	if conf.Dir == "" {
-		uploadpath = "upload.zip"
-	} else {
-		uploadpath = filepath.Join(conf.Dir, "upload.zip")
-	}
-
-	o := client.Bucket(conf.Bucket).Object(uploadpath)
-
-	wc := o.NewWriter(ctx)
-	_, err = io.Copy(wc, f)
-	cobra.CheckErr(err)
-	err = wc.Close()
-	cobra.CheckErr(err)
+	// flagの追加 -m, --messageでプッシュメッセージを指定できるようにする
+	pushCmd.PersistentFlags().StringVarP(&pushMessage, "message", "m", "", "message for push")
+	pushCmd.MarkPersistentFlagRequired("message")
 }
