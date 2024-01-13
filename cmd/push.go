@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/cfg/compress"
@@ -34,73 +33,72 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("push called", setting)
-		if setting.Target.Kind == "mysql" {
-			// TargetMysqlConfigTypeに変換する
-			var conf cfg.TargetMysqlType
-			err := mapstructure.Decode(setting.Target.Config, &conf)
-			cobra.CheckErr(err)
 
-			// dbダンプ
-			dumpDir, err := os.MkdirTemp("", ".cli_tool")
-			cobra.CheckErr(err)
-			dump.Dump(dumpDir, conf)
+		// dbダンプ
+		dumpDir, err := os.MkdirTemp("", ".cli_tool")
+		cobra.CheckErr(err)
 
-			// zip圧縮
-			zipfile := compress.Compress(dumpDir)
+		cfg.DispatchTarget(setting.Target, cfg.TargetFuncTable{
+			Mysql: func(conf cfg.TargetMysqlType) {
+				dump.Dump(dumpDir, conf)
+			},
+		})
 
-			// アップロード
-			var gcsConf cfg.UploadGoogleStorageType
-			err = mapstructure.Decode(setting.Upload.Config, &gcsConf)
-			cobra.CheckErr(err)
+		// zip圧縮
+		zipfile := compress.Compress(dumpDir)
 
-			_uuid, err := uuid.NewRandom()
-			cobra.CheckErr(err)
-			uuid := _uuid.String()
-			uuid = strings.Replace(uuid, "-", "", -1)
-			uuidWithZip := fmt.Sprintf("%s.zip", uuid)
+		_uuid, err := uuid.NewRandom()
+		cobra.CheckErr(err)
+		uuid := _uuid.String()
+		uuid = strings.Replace(uuid, "-", "", -1)
+		uuidWithZip := fmt.Sprintf("%s.zip", uuid)
 
-			storage.Upload(zipfile, uuidWithZip, gcsConf)
+		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
+			Gcs: func(conf cfg.StorageGoogleStorageType) {
+				// アップロード
+				storage.Upload(zipfile, uuidWithZip, conf)
 
-			fmt.Println("pushed to google storage!")
+				fmt.Println("pushed to google storage!")
 
-			nowTime := time.Now()
+				nowTime := time.Now()
 
-			v := cfg.VersionType{
-				Id:      uuid,
-				Time:    nowTime.Unix(),
-				Message: pushMessage,
-			}
+				v := cfg.VersionType{
+					Id:      uuid,
+					Time:    nowTime.Unix(),
+					Message: pushMessage,
+				}
 
-			b, err := json.Marshal(v)
-			cobra.CheckErr(err)
-			version := string(b)
-
-			if storage.IsExist(".cli_tool", gcsConf) {
-				filePath := storage.Download(".cli_tool", gcsConf)
-				f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+				b, err := json.Marshal(v)
 				cobra.CheckErr(err)
-				defer f.Close()
+				version := string(b)
 
-				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-				cobra.CheckErr(err)
-				err = f.Close()
-				cobra.CheckErr(err)
+				if storage.IsExist(".cli_tool", conf) {
+					filePath := storage.Download(".cli_tool", conf)
+					f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+					cobra.CheckErr(err)
+					defer f.Close()
 
-				storage.Upload(filePath, ".cli_tool", gcsConf)
-			} else {
-				tmpDir, err := os.MkdirTemp("", ".cli_tool")
-				cobra.CheckErr(err)
+					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+					cobra.CheckErr(err)
+					err = f.Close()
+					cobra.CheckErr(err)
 
-				tmpFile := filepath.Join(tmpDir, ".cli_tool")
-				f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
-				cobra.CheckErr(err)
-				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-				cobra.CheckErr(err)
-				err = f.Close()
-				cobra.CheckErr(err)
-				storage.Upload(tmpFile, ".cli_tool", gcsConf)
-			}
-		}
+					storage.Upload(filePath, ".cli_tool", conf)
+				} else {
+					tmpDir, err := os.MkdirTemp("", ".cli_tool")
+					cobra.CheckErr(err)
+
+					tmpFile := filepath.Join(tmpDir, ".cli_tool")
+					f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
+					cobra.CheckErr(err)
+					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+					cobra.CheckErr(err)
+					err = f.Close()
+					cobra.CheckErr(err)
+					storage.Upload(tmpFile, ".cli_tool", conf)
+				}
+			},
+		})
 	},
 }
 

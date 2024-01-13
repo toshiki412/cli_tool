@@ -7,7 +7,7 @@ target:
     password: root
     database: sample
 
-upload:
+storage:
   kind: gcs
   config:
     bucket: clitoolbacket0001
