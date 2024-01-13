@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
+	"github.com/toshiki412/cli_tool/file"
 )
 
 func Upload(target string, filename string, conf cfg.StorageGoogleStorageType) {
@@ -52,7 +53,7 @@ func Download(target string, conf cfg.StorageGoogleStorageType) string {
 
 	o := client.Bucket(conf.Bucket).Object(filePath)
 
-	tmpDir, err := os.MkdirTemp("", ".cli_tool")
+	tmpDir, err := file.MakeTempDir()
 	cobra.CheckErr(err)
 
 	tmpfile := filepath.Join(tmpDir, target)

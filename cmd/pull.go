@@ -12,6 +12,7 @@ import (
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/cfg/compress"
 	"github.com/toshiki412/cli_tool/dump"
+	"github.com/toshiki412/cli_tool/file"
 	"github.com/toshiki412/cli_tool/storage"
 )
 
@@ -27,7 +28,6 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Args: cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("pull called")
 		fmt.Println(args)
 
 		// pullidがあるかどうか
@@ -36,18 +36,11 @@ to quickly create a Cobra application.`,
 			versionId = args[0]
 		} else {
 			// TODO cli_tool_versionがない場合の処理
-			f, err := os.Open(".cli_tool_version")
-			cobra.CheckErr(err)
-
-			data := make([]byte, 1024)
-			_, err = f.Read(data)
+			data, err := os.ReadFile(".cli_tool_version")
 			cobra.CheckErr(err)
 
 			// 最新のバージョンを取得する
 			versionId = strings.Replace(string(data), "\n", "", -1)
-
-			err = f.Close()
-			cobra.CheckErr(err)
 		}
 
 		// 指定のバージョンをダウンロードする
@@ -59,8 +52,9 @@ to quickly create a Cobra application.`,
 			},
 		})
 
-		tmpDir, err := os.MkdirTemp("", ".cli_tool")
+		tmpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
+		defer os.RemoveAll(tmpDir)
 
 		// 展開する
 		compress.Decompress(tmpDir, tmpFile)
@@ -73,10 +67,8 @@ to quickly create a Cobra application.`,
 		})
 
 		// .cli_tool_versionを更新する
-		f, err := os.Open(".cli_tool_version")
+		err = os.WriteFile(".cli_tool_version", []byte(versionId), 0644)
 		cobra.CheckErr(err)
-		defer f.Close()
-		f.WriteString(versionId)
 
 		fmt.Printf("pulled successfully! version_id: %s\n", versionId)
 	},
