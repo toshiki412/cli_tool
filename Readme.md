@@ -1,6 +1,6 @@
-- goのインストールをする
+goのインストールをする
 
-    - Hello worldまで
+- Hello worldまで
 モジュールの作成
 $ go mod init url
     $ go mod init github.com/toshiki412/cli_tool
@@ -16,10 +16,10 @@ func main() {
 $ go run .
 Hello worldが出力
 
-    - 依存関係更新
+- 依存関係更新
 $ go mod tidy
 
-    - cobraのインストール
+- cobraのインストール
 go install github.com/spf13/cobra-cli@latest
 
 デフォルトでホームディレクトリの下にgoというフォルダができてその中に入る
@@ -30,7 +30,7 @@ $ ~/go/bin/cobra-cli init
 通している場合は
 $ cobra-cli init
 
-    - サブコマンドの追加
+- サブコマンドの追加
 $ cobra-cli add subcommand_name
 
 - gcloud cliのインストール
