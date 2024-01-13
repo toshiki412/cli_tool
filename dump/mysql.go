@@ -7,6 +7,7 @@ import (
 	"github.com/aliakseiz/go-mysqldump"
 	"github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
+	"github.com/tanimutomo/sqlfile"
 	"github.com/toshiki412/cli_tool/cfg"
 )
 
@@ -34,4 +35,23 @@ func Dump(dumpDir string, conf cfg.TargetMysqlType) {
 	fmt.Println("successfully dumped to file.")
 
 	dumper.Close()
+}
+
+func Import(dumpFile string, conf cfg.TargetMysqlType) {
+	config := mysql.NewConfig()
+	config.User = conf.User
+	config.Passwd = conf.Password
+	config.Net = "tcp"
+	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
+	config.DBName = conf.Database
+
+	db, err := sql.Open("mysql", config.FormatDSN())
+	cobra.CheckErr(err)
+
+	s := sqlfile.New()
+	err = s.File(dumpFile)
+	cobra.CheckErr(err)
+
+	_, err = s.Exec(db)
+	cobra.CheckErr(err)
 }
