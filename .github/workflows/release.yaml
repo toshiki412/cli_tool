@@ -2,9 +2,8 @@ name: release
 
 on:
   push:
-    branches:
-      - main
-      - work
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
