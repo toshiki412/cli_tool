@@ -16,6 +16,7 @@ import (
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/cfg/compress"
 	"github.com/toshiki412/cli_tool/dump"
+	"github.com/toshiki412/cli_tool/file"
 	"github.com/toshiki412/cli_tool/storage"
 )
 
@@ -33,8 +34,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// dbダンプ
-		dumpDir, err := os.MkdirTemp("", ".cli_tool")
+		dumpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
+		defer os.RemoveAll(dumpDir)
 
 		cfg.DispatchTarget(setting.Target, cfg.TargetFuncTable{
 			Mysql: func(conf cfg.TargetMysqlType) {
@@ -80,16 +82,19 @@ to quickly create a Cobra application.`,
 
 					storage.Upload(filePath, ".cli_tool", conf)
 				} else {
-					tmpDir, err := os.MkdirTemp("", ".cli_tool")
+					tmpDir, err := file.MakeTempDir()
 					cobra.CheckErr(err)
+					defer os.RemoveAll(tmpDir)
 
 					tmpFile := filepath.Join(tmpDir, ".cli_tool")
 					f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
 					cobra.CheckErr(err)
+
 					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
 					cobra.CheckErr(err)
 					err = f.Close()
 					cobra.CheckErr(err)
+
 					storage.Upload(tmpFile, ".cli_tool", conf)
 				}
 			},
@@ -103,5 +108,5 @@ func init() {
 
 	// flagの追加 -m, --messageでプッシュメッセージを指定できるようにする
 	pushCmd.Flags().StringVarP(&pushMessage, "message", "m", "", "message for push")
-	pushCmd.MarkPersistentFlagRequired("message")
+	pushCmd.MarkFlagRequired("message")
 }
