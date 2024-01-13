@@ -108,6 +108,6 @@ func init() {
 	rootCmd.AddCommand(pushCmd)
 
 	// flagの追加 -m, --messageでプッシュメッセージを指定できるようにする
-	pushCmd.PersistentFlags().StringVarP(&pushMessage, "message", "m", "", "message for push")
+	pushCmd.Flags().StringVarP(&pushMessage, "message", "m", "", "message for push")
 	pushCmd.MarkPersistentFlagRequired("message")
 }
