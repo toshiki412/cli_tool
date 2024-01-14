@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
-	"github.com/toshiki412/cli_tool/cfg/compress"
+	"github.com/toshiki412/cli_tool/compress"
 	"github.com/toshiki412/cli_tool/dump/dump_file"
 	"github.com/toshiki412/cli_tool/dump/dump_mysql"
 	"github.com/toshiki412/cli_tool/file"
