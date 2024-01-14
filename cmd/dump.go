@@ -74,6 +74,8 @@ to quickly create a Cobra application.`,
 
 		file.UpdateHistoryFile(dir, "_local", newVersion)
 		file.UpdateVersionFile(versionId)
+
+		fmt.Printf("dump success! version id: %s\n", versionId)
 	},
 }
 

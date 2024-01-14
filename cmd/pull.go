@@ -6,13 +6,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
-	"github.com/toshiki412/cli_tool/cfg/compress"
-	"github.com/toshiki412/cli_tool/dump/dump_file"
-	"github.com/toshiki412/cli_tool/dump/dump_mysql"
 	"github.com/toshiki412/cli_tool/file"
 	"github.com/toshiki412/cli_tool/storage"
 )
@@ -31,49 +28,29 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(args)
 
-		// pullidがあるかどうか
+		// 引数にversionIdがあるかどうか
 		var versionId = ""
 		if len(args) == 1 {
 			versionId = args[0]
 		} else {
-			// TODO cli_tool_versionがない場合の処理
-			data, err := os.ReadFile(".cli_tool_version")
+			var err error = nil
+			versionId, err = file.ReadVersionFile()
 			cobra.CheckErr(err)
-
-			// 最新のバージョンを取得する
-			versionId = strings.Replace(string(data), "\n", "", -1)
 		}
 
 		// 指定のバージョンをダウンロードする
 		var tmpFile string
 		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
 			Gcs: func(conf cfg.StorageGoogleStorageType) {
-				tmpFile = storage.Download(fmt.Sprintf("%s.zip", versionId), conf)
+				tmpFile = storage.Download(versionId+".zip", conf)
 				fmt.Println("downloaded from google storage!")
 			},
 		})
 
-		tmpDir, err := file.MakeTempDir()
+		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		defer os.RemoveAll(tmpDir)
 
-		// 展開する
-		compress.Decompress(tmpDir, tmpFile)
-
-		// 展開したものを適用する
-		for _, target := range setting.Targets {
-			cfg.DispatchTarget(target, cfg.TargetFuncTable{
-				Mysql: func(conf cfg.TargetMysqlType) {
-					dump_mysql.Import(tmpDir, conf)
-				},
-				File: func(conf cfg.TargetFileType) {
-					dump_file.Expand(tmpDir, conf)
-				},
-			})
-		}
-
-		// .cli_tool_versionを更新する
-		err = os.WriteFile(".cli_tool_version", []byte(versionId), 0644)
+		err = os.Rename(tmpFile, filepath.Join(dir, versionId+".zip"))
 		cobra.CheckErr(err)
 
 		fmt.Printf("pulled successfully! version_id: %s\n", versionId)

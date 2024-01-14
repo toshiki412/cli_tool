@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -66,6 +67,8 @@ to quickly create a Cobra application.`,
 		// .cli_tool_versionを更新する
 		err = file.UpdateVersionFile(versionId)
 		cobra.CheckErr(err)
+
+		fmt.Printf("applied successfully! version_id: %s\n", versionId)
 	},
 }
 
