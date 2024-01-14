@@ -14,7 +14,6 @@ import (
 const VERSION_FILE = ".cli_tool_version"
 const HISTORY_FILE = ".cli_tool"
 const DATADIR = ".cli_tool"
-const PERMISSION = 0644
 
 func configFiles() []string {
 	return []string{"cli_tool.yaml", "cli_tool.yml"} // yamlでもymlでもいい
@@ -24,6 +23,7 @@ func MakeTempDir() (string, error) {
 	return os.MkdirTemp("", ".cli_tool")
 }
 
+// cli_tool.yamlがあるディレクトリを探す
 func FindCurrentDir() (string, error) {
 	p, err := os.Getwd()
 	if err != nil {
@@ -79,21 +79,20 @@ func DataDir() (string, error) {
 	d := filepath.Join(dir, DATADIR)
 	s, err := os.Stat(d)
 	if err != nil {
-		os.Mkdir(d, PERMISSION)
-	}
-	if s.IsDir() {
+		os.Mkdir(d, os.ModePerm)
+	} else if !s.IsDir() {
 		return "", fmt.Errorf("datadir is file")
 	}
 
 	return d, nil
 }
 
-func UpdateHistoryFile(dir string, newVersion cfg.VersionType) error {
+func UpdateHistoryFile(dir string, suffix string, newVersion cfg.VersionType) error {
 	b, err := json.Marshal(newVersion)
 	cobra.CheckErr(err)
 	newLine := fmt.Sprintf("%s\n", string(b))
 
-	file := filepath.Join(dir, HISTORY_FILE)
+	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	_, err = os.Stat(file)
 	if err != nil {
 		writeFile(file, newLine)
@@ -111,11 +110,11 @@ func readFile(file string) (string, error) {
 }
 
 func writeFile(file string, data string) error {
-	return os.WriteFile(file, []byte(data), PERMISSION)
+	return os.WriteFile(file, []byte(data), os.ModePerm)
 }
 
 func appendFile(file string, data string) error {
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, PERMISSION)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}

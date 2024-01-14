@@ -6,7 +6,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -15,12 +17,13 @@ import (
 	"github.com/toshiki412/cli_tool/dump/dump_file"
 	"github.com/toshiki412/cli_tool/dump/dump_mysql"
 	"github.com/toshiki412/cli_tool/file"
-	"github.com/toshiki412/cli_tool/storage"
 )
 
-// pushCmd represents the push command
-var pushCmd = &cobra.Command{
-	Use:   "push",
+var dumpMessage string
+
+// dumpCmd represents the dump command
+var dumpCmd = &cobra.Command{
+	Use:   "dump",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -53,17 +56,31 @@ to quickly create a Cobra application.`,
 		versionId := _uuid.String()
 		versionId = strings.Replace(versionId, "-", "", -1)
 
-		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
-			Gcs: func(conf cfg.StorageGoogleStorageType) {
-				// アップロード
-				storage.Upload(zipfile, fmt.Sprintf("%s.zip", versionId), conf)
-			},
-		})
-		// TODO .cli_tool_versionを更新する
-		fmt.Printf("pushed successfully! version_id: %s\n", versionId)
+		// .cli_toolに移動
+		dir, err := file.DataDir()
+		cobra.CheckErr(err)
+		dest := filepath.Join(dir, fmt.Sprintf("%s.zip", versionId))
+		err = os.Rename(zipfile, dest)
+		cobra.CheckErr(err)
+
+		// .cli_tool/.cli_tool_local この中がローカル
+		// .cli_tool/.cli_tool(-remote) これがリモート
+
+		newVersion := cfg.VersionType{
+			Id:      versionId,
+			Time:    time.Now().Unix(),
+			Message: dumpMessage,
+		}
+
+		file.UpdateHistoryFile(dir, "_local", newVersion)
+		file.UpdateVersionFile(versionId)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(dumpCmd)
+
+	// flagの追加 -m, --messageでプッシュメッセージを指定できるようにする
+	dumpCmd.Flags().StringVarP(&dumpMessage, "message", "m", "", "message for push")
+	dumpCmd.MarkFlagRequired("message")
 }
