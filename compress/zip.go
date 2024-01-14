@@ -75,7 +75,7 @@ func addZipFiles(writer *zip.Writer, basePath, pathInZip string) error {
 	return nil
 }
 
-func addZipFile(writer *zip.Writer, targetFilePath, pathInZip string) {
+func addZipFile(writer *zip.Writer, targetFilePath string, pathInZip string) {
 	data, err := os.ReadFile(targetFilePath)
 	cobra.CheckErr(err)
 
@@ -123,7 +123,7 @@ func complementPath(path string) string {
 }
 
 // 解凍
-func Decompress(dest, target string) error {
+func Decompress(dest string, target string) error {
 	reader, err := zip.OpenReader(target) // readerがzipファイルの中身
 	cobra.CheckErr(err)
 	defer reader.Close()

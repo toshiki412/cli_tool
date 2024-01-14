@@ -4,59 +4,74 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
+	"github.com/toshiki412/cli_tool/file"
 	"github.com/toshiki412/cli_tool/storage"
 )
+
+var remote bool
 
 // lsCmd represents the ls command
 var lsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "list history",
+	Long:  `list history`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// .cli_toolをstorageから取得する
-		var tmpFile string
-		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
-			Gcs: func(conf cfg.StorageGoogleStorageType) {
-				tmpFile = storage.Download(".cli_tool", conf)
-			},
-		})
+		// lsはlocalのバージョン履歴を表示する
+		// -rオプションがある場合はリモートのバージョン履歴も表示する
 
-		// 読み込む
-		data, err := os.ReadFile(tmpFile)
-		cobra.CheckErr(err)
-		fmt.Println(string(data))
-		lines := strings.Split(string(data), "\n")
-
-		// 表示する
-		fmt.Println("id\ttime\tmessage")
-		for _, line := range lines {
-			if line == "" {
-				continue
-			}
-			var version cfg.VersionType
-			err := json.Unmarshal([]byte(line), &version)
-			cobra.CheckErr(err)
-			d := time.Unix(version.Time, 0).Format("2006-01-02 15:04:05")
-
-			fmt.Printf("%s\t%s\t%s\n", version.Id, d, version.Message)
+		// .cli_toolがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("cli_tool.yaml not found!")
+			return
 		}
 
+		dataDir, err := file.DataDir()
+		cobra.CheckErr(err)
+
+		// リモートのバージョン履歴を読み込む
+		var remoteList []cfg.VersionType
+		if remote {
+			var tmpFile string
+			cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
+				Gcs: func(conf cfg.StorageGoogleStorageType) {
+					tmpFile = storage.Download(".cli_tool", conf)
+				},
+			})
+
+			os.Rename(tmpFile, filepath.Join(dataDir, ".cli_tool"))
+			remoteList = file.ListHistory("")
+		}
+		// ローカルのバージョン履歴を読み込む
+		localList := file.ListHistory("_local")
+
+		// 表示する
+		if remote {
+			fmt.Println("~~~ remote history ~~~")
+			fmt.Println("id\ttime\tmessage")
+			for _, version := range remoteList {
+				d := time.Unix(version.Time, 0).Format("2006-01-02 15:04:05")
+				fmt.Printf("%s\t%s\t%s\n", version.Id, d, version.Message)
+			}
+		}
+		fmt.Println("~~~ local history ~~~")
+		fmt.Println("id\ttime\tmessage")
+		for _, version := range localList {
+			d := time.Unix(version.Time, 0).Format("2006-01-02 15:04:05")
+			fmt.Printf("%s\t%s\t%s\n", version.Id, d, version.Message)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(lsCmd)
+
+	lsCmd.Flags().BoolVarP(&remote, "remote", "r", false, "show with remote history")
 }
