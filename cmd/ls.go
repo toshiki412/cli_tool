@@ -26,18 +26,11 @@ var lsCmd = &cobra.Command{
 		// lsはlocalのバージョン履歴を表示する
 		// -rオプションがある場合はリモートのバージョン履歴も表示する
 
-		// .cli_toolがあるかどうか
-		_, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("cli_tool.yaml not found!")
-			return
-		}
-
 		dataDir, err := file.DataDir()
 		cobra.CheckErr(err)
 
 		// リモートのバージョン履歴を読み込む
-		var remoteList []cfg.VersionType
+		var remoteList cfg.DataType
 		if remote {
 			var tmpFile string
 			cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
@@ -47,23 +40,23 @@ var lsCmd = &cobra.Command{
 			})
 
 			os.Rename(tmpFile, filepath.Join(dataDir, ".cli_tool"))
-			remoteList = file.ListHistory("")
+			remoteList = file.ReadRemoteDataFile()
 		}
 		// ローカルのバージョン履歴を読み込む
-		localList := file.ListHistory("_local")
+		localList := file.ReadLocalDataFile()
 
 		// 表示する
 		if remote {
 			fmt.Println("~~~ remote history ~~~")
 			fmt.Println("id\ttime\tmessage")
-			for _, version := range remoteList {
+			for _, version := range remoteList.Histories {
 				d := time.Unix(version.Time, 0).Format("2006-01-02 15:04:05")
 				fmt.Printf("%s\t%s\t%s\n", version.Id, d, version.Message)
 			}
 		}
 		fmt.Println("~~~ local history ~~~")
 		fmt.Println("id\ttime\tmessage")
-		for _, version := range localList {
+		for _, version := range localList.Histories {
 			d := time.Unix(version.Time, 0).Format("2006-01-02 15:04:05")
 			fmt.Printf("%s\t%s\t%s\n", version.Id, d, version.Message)
 		}

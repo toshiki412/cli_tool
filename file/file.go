@@ -89,44 +89,6 @@ func DataDir() (string, error) {
 	return d, nil
 }
 
-func UpdateHistoryFile(dir string, suffix string, newVersion cfg.VersionType) error {
-	b, err := json.Marshal(newVersion)
-	cobra.CheckErr(err)
-	newLine := fmt.Sprintf("%s\n", string(b))
-
-	file := filepath.Join(dir, HISTORY_FILE+suffix)
-	_, err = os.Stat(file)
-	if err != nil {
-		writeFile(file, newLine)
-		return nil
-	}
-	return appendFile(file, newLine)
-}
-
-func ListHistory(suffix string) []cfg.VersionType {
-	dir, err := DataDir()
-	cobra.CheckErr(err)
-
-	file := filepath.Join(dir, HISTORY_FILE+suffix)
-	content, err := readFile(file)
-	cobra.CheckErr(err)
-
-	lines := strings.Split(content, "\n")
-	var list = make([]cfg.VersionType, 0)
-	var version cfg.VersionType
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		err = json.Unmarshal([]byte(line), &version)
-		cobra.CheckErr(err)
-
-		list = append(list, version)
-	}
-
-	return list
-}
-
 func readFile(file string) (string, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
@@ -156,8 +118,8 @@ func appendFile(file string, data string) error {
 }
 
 func findVersion(versionId string, suffix string) (cfg.VersionType, error) {
-	list := ListHistory(suffix)
-	for _, version := range list {
+	ds := readDataFile(suffix)
+	for _, version := range ds.Histories {
 		if strings.HasPrefix(version.Id, versionId) {
 			return version, nil
 		}
@@ -179,41 +141,74 @@ func FindVersion(versionId string) (cfg.VersionType, error) {
 	return cfg.VersionType{}, fmt.Errorf("version not found")
 }
 
-func MoveVersion(target cfg.VersionType) {
-	localList := ListHistory("_local")
-	remoteList := ListHistory("")
+func ReadLocalDataFile() cfg.DataType {
+	return readDataFile("_local")
+}
+
+func ReadRemoteDataFile() cfg.DataType {
+	return readDataFile("")
+}
+
+func readDataFile(suffix string) cfg.DataType {
+	dir, err := DataDir()
+	cobra.CheckErr(err)
+	file := filepath.Join(dir, HISTORY_FILE+suffix)
+	content, err := readFile(file)
+	if err != nil {
+		return cfg.DataType{
+			Version:   "1",
+			Histories: []cfg.VersionType{},
+		}
+	}
+	var ds cfg.DataType
+	err = json.Unmarshal([]byte(content), &ds)
+	cobra.CheckErr(err)
+	return ds
+}
+
+func MoveVersionToRemote(version cfg.VersionType) {
+	local := ReadLocalDataFile()
+	remote := ReadRemoteDataFile()
 
 	newLocalList := make([]cfg.VersionType, 0)
-	for _, version := range localList {
-		if version.Id == target.Id {
+	for _, ver := range local.Histories {
+		if ver.Id == version.Id {
 			continue
 		}
-		newLocalList = append(newLocalList, version)
+		newLocalList = append(newLocalList, ver)
 	}
 
-	remoteList = append(remoteList, target)
-	sort.Slice(remoteList, func(i, j int) bool {
-		return remoteList[i].Time < remoteList[j].Time
+	remote.Histories = append(remote.Histories, version)
+	sort.Slice(remote.Histories, func(i, j int) bool {
+		return remote.Histories[i].Time < remote.Histories[j].Time
 	})
 
-	writeFile(filepath.Join(DATADIR, HISTORY_FILE), versionListToString(remoteList))
-	writeFile(filepath.Join(DATADIR, HISTORY_FILE+"_local"), versionListToString(newLocalList))
+	err := WriteLocalDataFile(local)
+	cobra.CheckErr(err)
+	err = WriteRemoteDataFile(remote)
+	cobra.CheckErr(err)
 }
 
-func versionListToString(list []cfg.VersionType) string {
-	var str = ""
-	for _, version := range list {
-		line, err := versionToString(version)
-		cobra.CheckErr(err)
-		str += line
-	}
-	return str
+func WriteLocalDataFile(d cfg.DataType) error {
+	return writeDataFile(d, "_local")
 }
 
-func versionToString(version cfg.VersionType) (string, error) {
-	b, err := json.Marshal(version)
+func WriteRemoteDataFile(d cfg.DataType) error {
+	return writeDataFile(d, "")
+}
+
+func writeDataFile(d cfg.DataType, suffix string) error {
+	b, err := json.MarshalIndent(d, "", "    ")
 	if err != nil {
-		return "", err
+		return err
 	}
-	return fmt.Sprintf("%s\n", string(b)), nil
+	dir, err := DataDir()
+	if err != nil {
+		return err
+	}
+	err = writeFile(filepath.Join(dir, HISTORY_FILE+suffix), string(b))
+	if err != nil {
+		return err
+	}
+	return nil
 }

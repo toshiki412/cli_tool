@@ -1,8 +1,20 @@
-{"id":"ab2783cf77bb4cf98fdcb8205ceb9995","time":1705204275,"message":"test"}
-{"id":"53606f5c4e454acdacf002c2a852a962","time":1705204970,"message":"test2"}
-{"id":"81704a3c00b64bf686dbf36b31da4031","time":1705205170,"message":"test3"}
-{"id":"a931899a72f7493dada43e8b45f0e8cc","time":1705205182,"message":"test4"}
-{"id":"0afe232c50a74f589286a76f9d29ffd4","time":1705221446,"message":"local test2"}
-{"id":"e60d95533ff24fcc954b216787d65bf1","time":1705223281,"message":"1"}
-{"id":"fa3b86ec4fb544b1b23085e31e598f2d","time":1705223283,"message":"2"}
-{"id":"9dff5a8a98494a7782be4382f1819fbf","time":1705223286,"message":"3"}
+{
+    "version": "1",
+    "histories": [
+        {
+            "id": "b1084e3432394fec9425e71e21a43616",
+            "time": 1705226157,
+            "message": "test"
+        },
+        {
+            "id": "ec5c1b2407fa46798acec8f47288a4dd",
+            "time": 1705226333,
+            "message": "1"
+        },
+        {
+            "id": "fa1beaf79dd7479b9e774929c4c95d10",
+            "time": 1705226335,
+            "message": "2"
+        }
+    ]
+}

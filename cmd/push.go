@@ -24,13 +24,6 @@ var pushCmd = &cobra.Command{
 		// 引数があれば、そのバージョンのデータがリモートにpushされる
 		// pushすると.cli_tool_localから履歴がなくなりリモートに移動する
 
-		// .cli_toolがあるかどうか
-		_, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("cli_tool.yaml not found!")
-			return
-		}
-
 		// 引数にversionIdがあるかどうか
 		var versionId = ""
 		if len(args) == 1 {
@@ -57,7 +50,7 @@ var pushCmd = &cobra.Command{
 				storage.Upload(filepath.Join(dataDir, version.Id+".zip"), version.Id+".zip", conf)
 
 				// FIXME .cli_tool_localのデータをリモートの.cli_toolに同期する
-				file.MoveVersion(version)
+				file.MoveVersionToRemote(version)
 				storage.Upload(filepath.Join(dataDir, ".cli_tool"), ".cli_tool", conf)
 			},
 		})
