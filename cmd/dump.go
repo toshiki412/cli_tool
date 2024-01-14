@@ -24,15 +24,22 @@ var dumpMessage string
 // dumpCmd represents the dump command
 var dumpCmd = &cobra.Command{
 	Use:   "dump",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "dump current data",
+	Long:  `dump current data`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// dumpすると.cli_tool下にzipファイルが生成され、
+		// .cli_tool_localに新しいバージョンの履歴が追加され、
+		// .cli_tool_versionが更新される
+
+		// .cli_toolがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("cli_tool.yaml not found!")
+			return
+		}
+
 		// dbダンプ
+		// dumpDirにダンプしたデータが入る
 		dumpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
@@ -53,26 +60,27 @@ to quickly create a Cobra application.`,
 
 		_uuid, err := uuid.NewRandom()
 		cobra.CheckErr(err)
-		versionId := _uuid.String()
+		versionId := _uuid.String() // 新しいバージョンのuuidを振る
 		versionId = strings.Replace(versionId, "-", "", -1)
 
-		// .cli_toolに移動
+		// .cli_toolに持っていく
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		dest := filepath.Join(dir, fmt.Sprintf("%s.zip", versionId))
+		dest := filepath.Join(dir, versionId+".zip") // .cli_tool/xxxxxxxx.zip
 		err = os.Rename(zipfile, dest)
 		cobra.CheckErr(err)
 
-		// .cli_tool/.cli_tool_local この中がローカル
-		// .cli_tool/.cli_tool(-remote) これがリモート
-
+		// 新しいバージョンのstructを作成
 		newVersion := cfg.VersionType{
 			Id:      versionId,
 			Time:    time.Now().Unix(),
 			Message: dumpMessage,
 		}
 
+		// 生成した新しいバージョンをローカルに保存する
 		file.UpdateHistoryFile(dir, "_local", newVersion)
+
+		// .cli_tool_versionをdumpしたバージョンに更新する
 		file.UpdateVersionFile(versionId)
 
 		fmt.Printf("dump success! version id: %s\n", versionId)
