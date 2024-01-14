@@ -1,10 +1,10 @@
 package cfg // フォルダ名
 
 type TargetMysqlType struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
+	Host     string `default:"localhost"`
+	Port     int    `default:"3306"`
+	User     string `default:"root"`
+	Password string `default:""`
 	Database string
 }
 
@@ -48,4 +48,9 @@ type TargetFuncTable struct {
 type StorageGoogleStorageFunc func(config StorageGoogleStorageType)
 type StorageFuncTable struct {
 	Gcs StorageGoogleStorageFunc
+}
+
+type DataType struct {
+	Version   string        `json:"version"`
+	Histories []VersionType `json:"histories"`
 }

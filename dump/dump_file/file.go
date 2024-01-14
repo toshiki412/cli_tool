@@ -15,8 +15,15 @@ func Dump(dumpDir string, conf cfg.TargetFileType) {
 	cobra.CheckErr(err)
 
 	src := filepath.Join(cwd, conf.Path)
+	s, err := os.Stat(src)
+	cobra.CheckErr(err)
+
 	dest := filepath.Join(dumpDir, conf.Path)
-	err = os.MkdirAll(dest, os.ModePerm)
+	destDir := dest
+	if !s.IsDir() {
+		destDir = filepath.Dir(dest)
+	}
+	err = os.MkdirAll(destDir, os.ModePerm)
 	cobra.CheckErr(err)
 
 	err = cp.Copy(src, dest)
@@ -28,8 +35,15 @@ func Expand(dumpDir string, conf cfg.TargetFileType) {
 	cobra.CheckErr(err)
 
 	src := filepath.Join(dumpDir, conf.Path)
+	s, err := os.Stat(src)
+	cobra.CheckErr(err)
+
 	dest := filepath.Join(cwd, conf.Path)
-	err = os.MkdirAll(dest, os.ModePerm)
+	destDir := dest
+	if !s.IsDir() {
+		destDir = filepath.Dir(dest)
+	}
+	err = os.MkdirAll(destDir, os.ModePerm)
 	cobra.CheckErr(err)
 
 	err = cp.Copy(src, dest)

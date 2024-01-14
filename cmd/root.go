@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/toshiki412/cli_tool/cfg"
+	"github.com/toshiki412/cli_tool/file"
 )
 
 var (
@@ -40,12 +41,17 @@ func initConfig() {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	} else {
-		cwd, err := os.Getwd() // カレントディレクトリの取得
-		cobra.CheckErr(err)
+		// .cli_tool.yamlがあるかどうか
+		dir, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("cli_tool.yaml not found!")
+			return
+		}
 
-		viper.AddConfigPath(cwd)
+		viper.AddConfigPath(dir)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("cli_tool")
+		fmt.Println(dir)
 	}
 
 	if err := viper.ReadInConfig(); err == nil {

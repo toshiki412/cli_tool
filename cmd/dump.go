@@ -31,13 +31,6 @@ var dumpCmd = &cobra.Command{
 		// .cli_tool_localに新しいバージョンの履歴が追加され、
 		// .cli_tool_versionが更新される
 
-		// .cli_toolがあるかどうか
-		_, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("cli_tool.yaml not found!")
-			return
-		}
-
 		// dbダンプ
 		// dumpDirにダンプしたデータが入る
 		dumpDir, err := file.MakeTempDir()
@@ -77,8 +70,11 @@ var dumpCmd = &cobra.Command{
 			Message: dumpMessage,
 		}
 
+		local := file.ReadLocalDataFile()
+		local.Histories = append(local.Histories, newVersion)
+
 		// 生成した新しいバージョンをローカルに保存する
-		file.UpdateHistoryFile(dir, "_local", newVersion)
+		file.WriteLocalDataFile(local)
 
 		// .cli_tool_versionをdumpしたバージョンに更新する
 		file.UpdateVersionFile(versionId)
