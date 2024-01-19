@@ -1,5 +1,7 @@
 package cfg // フォルダ名
 
+import "path/filepath"
+
 type TargetMysqlType struct {
 	Host     string `default:"localhost"`
 	Port     int    `default:"3306"`
@@ -36,6 +38,14 @@ type VersionType struct {
 	Id      string `json:"id"`
 	Time    int64  `json:"time"`
 	Message string `json:"message"`
+}
+
+func (v VersionType) CreateZipFile() string {
+	return v.Id + ".zip"
+}
+
+func (v VersionType) CreateZipFileWithDir(dir string) string {
+	return filepath.Join(dir, v.CreateZipFile())
 }
 
 type TargetMysqlFunc func(config TargetMysqlType) // 関数型
