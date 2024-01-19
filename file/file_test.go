@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,15 +22,20 @@ func teardown(dir string) {
 	os.RemoveAll(dir)
 }
 
+func createFile(home string, file string, content string) {
+	os.WriteFile(filepath.Join(home, file), []byte(content), os.ModePerm)
+}
+
 func TestFindCurrentDir(t *testing.T) {
 	home := setup(t)
 	defer teardown(home)
 
 	dir, err := FindCurrentDir()
 	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("file not found"), err)
 	assert.Equal(t, "", dir)
 
-	os.WriteFile(filepath.Join(home, "cli_tool.yaml"), []byte(""), os.ModePerm)
+	createFile(home, "cli_tool.yaml", "")
 
 	dir, err = FindCurrentDir()
 	assert.NoError(t, err)
@@ -37,6 +43,35 @@ func TestFindCurrentDir(t *testing.T) {
 }
 
 // .cli_tool_versionファイルにあるバージョンを読む
-// func TestReadVersionFile(t *testing.T) {
-// 	assert.Equal(t, "b1084e3432394fec9425e71e21a43616", ReadVersionFile())
-// }
+func TestReadVersionFile(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+
+	assert.Equal(t, "", ReadVersionFile())
+
+	createFile(home, ".cli_tool_version", "")
+	assert.Equal(t, "", ReadVersionFile())
+
+	createFile(home, "cli_tool.yaml", "")
+	assert.Equal(t, "", ReadVersionFile())
+
+	createFile(home, ".cli_tool_version", "1.2.3")
+	assert.Equal(t, "1.2.3", ReadVersionFile())
+
+	createFile(home, ".cli_tool_version", "1.2.3\n")
+	assert.Equal(t, "1.2.3", ReadVersionFile())
+}
+
+func TestUppdateVersionFile(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+	createFile(home, "cli_tool.yaml", "")
+
+	err := UpdateVersionFile("1.2.3")
+	assert.NoError(t, err)
+	assert.Equal(t, "1.2.3", ReadVersionFile())
+
+	err = UpdateVersionFile("4.5.6\n")
+	assert.NoError(t, err)
+	assert.Equal(t, "4.5.6", ReadVersionFile())
+}

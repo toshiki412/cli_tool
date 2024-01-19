@@ -65,10 +65,10 @@ func ReadVersionFile() string {
 
 func UpdateVersionFile(versionId string) error {
 	dir, err := FindCurrentDir()
-	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return err
 	}
+	file := filepath.Join(dir, VERSION_FILE)
 	return writeFile(file, versionId)
 }
 
