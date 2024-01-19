@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
@@ -35,14 +34,8 @@ var applyCmd = &cobra.Command{
 		}
 
 		// 引数にversionIdがあるかどうか
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			// 引数がない場合は.cli_tool_versionを見る
-			versionId = file.ReadVersionFile()
-		}
-		if versionId == "" {
+		versionId, err := file.GetCurrentVersion(args)
+		if err != nil {
 			fmt.Println("version not found!")
 			return
 		}
@@ -56,7 +49,7 @@ var applyCmd = &cobra.Command{
 
 		dataDir, err := file.DataDir()
 		cobra.CheckErr(err)
-		tmpFile := filepath.Join(dataDir, version.Id+".zip")
+		tmpFile := version.CreateZipFileWithDir(dataDir)
 
 		// ダウンロードしてない場合の処理
 		s, err := os.Stat(tmpFile)

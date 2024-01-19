@@ -6,11 +6,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
 	"github.com/toshiki412/cli_tool/compress"
@@ -51,24 +48,21 @@ var dumpCmd = &cobra.Command{
 		// zip圧縮
 		zipfile := compress.Compress(dumpDir)
 
-		_uuid, err := uuid.NewRandom()
-		cobra.CheckErr(err)
-		versionId := _uuid.String() // 新しいバージョンのuuidを振る
-		versionId = strings.Replace(versionId, "-", "", -1)
-
-		// .cli_toolに持っていく
-		dir, err := file.DataDir()
-		cobra.CheckErr(err)
-		dest := filepath.Join(dir, versionId+".zip") // .cli_tool/xxxxxxxx.zip
-		err = os.Rename(zipfile, dest)
-		cobra.CheckErr(err)
-
 		// 新しいバージョンのstructを作成
+		versionId, err := file.NewUUID()
+		cobra.CheckErr(err)
 		newVersion := cfg.VersionType{
 			Id:      versionId,
 			Time:    time.Now().Unix(),
 			Message: dumpMessage,
 		}
+
+		// .cli_toolに持っていく
+		dir, err := file.DataDir()
+		cobra.CheckErr(err)
+		dest := newVersion.CreateZipFileWithDir(dir) // .cli_tool/xxxxxxxx.zip
+		err = os.Rename(zipfile, dest)
+		cobra.CheckErr(err)
 
 		local := file.ReadLocalDataFile()
 		local.Histories = append(local.Histories, newVersion)

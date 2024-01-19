@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
@@ -25,16 +24,12 @@ var pullCmd = &cobra.Command{
 		// 引数があれば、そのバージョンのデータがリモートからpullされる
 
 		// 引数にversionIdがあるかどうか
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			versionId = file.ReadVersionFile()
-		}
-		if versionId == "" {
+		versionId, err := file.GetCurrentVersion(args)
+		if err != nil {
 			fmt.Println("version not found!")
 			return
 		}
+
 		version, err := file.FindVersion(versionId)
 		if err != nil {
 			fmt.Println("version not found!")
@@ -45,7 +40,7 @@ var pullCmd = &cobra.Command{
 		var downloadedFile string
 		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
 			Gcs: func(conf cfg.StorageGoogleStorageType) {
-				downloadedFile = storage.Download(version.Id+".zip", conf)
+				downloadedFile = storage.Download(version.CreateZipFile(), conf)
 				fmt.Println("downloaded from google storage!")
 			},
 		})
@@ -53,7 +48,7 @@ var pullCmd = &cobra.Command{
 		dataDir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		err = os.Rename(downloadedFile, filepath.Join(dataDir, versionId+".zip"))
+		err = os.Rename(downloadedFile, version.CreateZipFileWithDir(dataDir))
 		cobra.CheckErr(err)
 
 		fmt.Printf("pulled successfully! version_id: %s\n", versionId)

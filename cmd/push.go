@@ -25,16 +25,12 @@ var pushCmd = &cobra.Command{
 		// pushすると.cli_tool_localから履歴がなくなりリモートに移動する
 
 		// 引数にversionIdがあるかどうか
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			versionId = file.ReadVersionFile()
-		}
-		if versionId == "" {
+		versionId, err := file.GetCurrentVersion(args)
+		if err != nil {
 			fmt.Println("version not found!")
 			return
 		}
+
 		version, err := file.FindVersion(versionId)
 		if err != nil {
 			fmt.Println("version not found!")
@@ -47,7 +43,7 @@ var pushCmd = &cobra.Command{
 		// アップロード
 		cfg.DispatchStorages(setting.Storage, cfg.StorageFuncTable{
 			Gcs: func(conf cfg.StorageGoogleStorageType) {
-				storage.Upload(filepath.Join(dataDir, version.Id+".zip"), version.Id+".zip", conf)
+				storage.Upload(version.CreateZipFileWithDir(dataDir), version.CreateZipFile(), conf)
 
 				// FIXME .cli_tool_localのデータをリモートの.cli_toolに同期する
 				file.MoveVersionToRemote(version)

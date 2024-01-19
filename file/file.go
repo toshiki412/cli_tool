@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
 )
@@ -211,4 +212,32 @@ func writeDataFile(d cfg.DataType, suffix string) error {
 		return err
 	}
 	return nil
+}
+
+func GetCurrentVersion(args []string) (string, error) {
+	// 引数にversionIdがあるかどうか
+	var versionId = ""
+	if len(args) == 1 {
+		versionId = args[0]
+	} else {
+		// 引数がない場合は.cli_tool_versionを見る
+		versionId = ReadVersionFile()
+	}
+
+	if versionId == "" {
+		return "", fmt.Errorf("version not found!")
+	}
+
+	return versionId, nil
+}
+
+func NewUUID() (string, error) {
+	_uuid, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+
+	uuid := _uuid.String() // 新しいバージョンのuuidを振る
+	uuid = strings.Replace(uuid, "-", "", -1)
+	return uuid, nil
 }
