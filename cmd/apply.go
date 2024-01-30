@@ -34,14 +34,7 @@ var applyCmd = &cobra.Command{
 		}
 
 		// 引数にversionIdがあるかどうか
-		versionId, err := file.GetCurrentVersion(args)
-		if err != nil {
-			fmt.Println("version not found!")
-			return
-		}
-
-		// versionIdからversionを取得する (頭6文字くらいでもいける)
-		version, err := file.FindVersion(versionId)
+		version, err := file.GetCurrentVersion(args)
 		if err != nil {
 			fmt.Println("version not found!")
 			return
@@ -77,10 +70,10 @@ var applyCmd = &cobra.Command{
 		}
 
 		// .cli_tool_versionをapplyしたバージョンに更新する
-		err = file.UpdateVersionFile(versionId)
+		err = file.UpdateVersionFile(version.Id)
 		cobra.CheckErr(err)
 
-		fmt.Printf("applied successfully! version_id: %s\n", versionId)
+		fmt.Printf("applied successfully! version_id: %s\n", version.Id)
 	},
 }
 

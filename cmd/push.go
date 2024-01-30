@@ -25,13 +25,7 @@ var pushCmd = &cobra.Command{
 		// pushすると.cli_tool_localから履歴がなくなりリモートに移動する
 
 		// 引数にversionIdがあるかどうか
-		versionId, err := file.GetCurrentVersion(args)
-		if err != nil {
-			fmt.Println("version not found!")
-			return
-		}
-
-		version, err := file.FindVersion(versionId)
+		version, err := file.GetCurrentVersion(args)
 		if err != nil {
 			fmt.Println("version not found!")
 			return
