@@ -33,7 +33,7 @@ func TestFindCurrentDir(t *testing.T) {
 
 	dir, err := FindCurrentDir()
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("config file not found"), err)
+	assert.Equal(t, fmt.Errorf("file not found"), err)
 	assert.Equal(t, "", dir)
 
 	createFile(home, "cli_tool.yaml", "")
@@ -82,7 +82,7 @@ func TestDataDir(t *testing.T) {
 
 	dir, err := DataDir()
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("config file not found"), err)
+	assert.Equal(t, fmt.Errorf("file not found"), err)
 	assert.Equal(t, "", dir)
 
 	createFile(home, "cli_tool.yaml", "")
@@ -153,14 +153,14 @@ func TestGetCurrentVersion(t *testing.T) {
 
 	v, err := GetCurrentVersion([]string{})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, fmt.Errorf("version not found"), err)
 	assert.Equal(t, cfg.VersionType{}, v)
 
 	UpdateVersionFile("123")
 
 	v, err = GetCurrentVersion([]string{})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, fmt.Errorf("version not found"), err)
 	assert.Equal(t, cfg.VersionType{}, v)
 
 	localData := cfg.DataType{
@@ -191,7 +191,7 @@ func TestGetCurrentVersion(t *testing.T) {
 
 	v, err = GetCurrentVersion([]string{"789"})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, fmt.Errorf("version not found"), err)
 	assert.Equal(t, cfg.VersionType{}, v)
 
 	MoveVersionToRemote(localData.Histories[0])
@@ -206,7 +206,7 @@ func TestGetCurrentVersion(t *testing.T) {
 
 	v, err = GetCurrentVersion([]string{"789"})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, fmt.Errorf("version not found"), err)
 	assert.Equal(t, cfg.VersionType{}, v)
 
 	MoveVersionToRemote(localData.Histories[1])
@@ -221,7 +221,7 @@ func TestGetCurrentVersion(t *testing.T) {
 
 	v, err = GetCurrentVersion([]string{"789"})
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, fmt.Errorf("version not found"), err)
 	assert.Equal(t, cfg.VersionType{}, v)
 }
 
