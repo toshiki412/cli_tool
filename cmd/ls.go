@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -39,7 +38,7 @@ var lsCmd = &cobra.Command{
 				},
 			})
 
-			os.Rename(tmpFile, filepath.Join(dataDir, ".cli_tool"))
+			file.MoveFile(tmpFile, filepath.Join(dataDir, ".cli_tool"))
 			remoteList = file.ReadRemoteDataFile()
 		}
 		// ローカルのバージョン履歴を読み込む
