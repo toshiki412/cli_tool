@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pingcap/tidb/parser"
-	"github.com/pingcap/tidb/parser/format"
-	_ "github.com/pingcap/tidb/parser/test_driver"
+	"github.com/pingcap/tidb/pkg/parser"
+	"github.com/pingcap/tidb/pkg/parser/format"
+	_ "github.com/pingcap/tidb/pkg/parser/test_driver"
 
 	"github.com/JamesStewy/go-mysqldump"
 
