@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
@@ -24,13 +23,7 @@ var pullCmd = &cobra.Command{
 		// 引数があれば、そのバージョンのデータがリモートからpullされる
 
 		// 引数にversionIdがあるかどうか
-		versionId, err := file.GetCurrentVersion(args)
-		if err != nil {
-			fmt.Println("version not found!")
-			return
-		}
-
-		version, err := file.FindVersion(versionId)
+		version, err := file.GetCurrentVersion(args)
 		if err != nil {
 			fmt.Println("version not found!")
 			return
@@ -48,10 +41,10 @@ var pullCmd = &cobra.Command{
 		dataDir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		err = os.Rename(downloadedFile, version.CreateZipFileWithDir(dataDir))
+		err = file.MoveFile(downloadedFile, version.CreateZipFileWithDir(dataDir))
 		cobra.CheckErr(err)
 
-		fmt.Printf("pulled successfully! version_id: %s\n", versionId)
+		fmt.Printf("pulled successfully! version_id: %s\n", version.Id)
 	},
 }
 

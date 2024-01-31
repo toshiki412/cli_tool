@@ -34,14 +34,7 @@ var applyCmd = &cobra.Command{
 		}
 
 		// 引数にversionIdがあるかどうか
-		versionId, err := file.GetCurrentVersion(args)
-		if err != nil {
-			fmt.Println("version not found!")
-			return
-		}
-
-		// versionIdからversionを取得する (頭6文字くらいでもいける)
-		version, err := file.FindVersion(versionId)
+		version, err := file.GetCurrentVersion(args)
 		if err != nil {
 			fmt.Println("version not found!")
 			return
@@ -62,25 +55,29 @@ var applyCmd = &cobra.Command{
 		defer os.RemoveAll(tmpDir)
 
 		// 展開する
+		fmt.Println("decompressing...")
 		compress.Decompress(tmpDir, tmpFile)
 
 		// 展開したものを適用する
 		for _, target := range setting.Targets {
 			cfg.DispatchTarget(target, cfg.TargetFuncTable{
 				Mysql: func(conf cfg.TargetMysqlType) {
-					dump_mysql.Import(tmpDir, conf)
+					fmt.Printf("import mysql database = %s\n", conf.Database)
+					dump_mysql.Import(dump_mysql.MysqlDumpFile(tmpDir, conf), conf)
 				},
 				File: func(conf cfg.TargetFileType) {
+					fmt.Printf("copy file(s) directory = %s\n", conf.Path)
 					dump_file.Expand(tmpDir, conf)
 				},
 			})
 		}
 
 		// .cli_tool_versionをapplyしたバージョンに更新する
-		err = file.UpdateVersionFile(versionId)
+		fmt.Println("finalizing...")
+		err = file.UpdateVersionFile(version.Id)
 		cobra.CheckErr(err)
 
-		fmt.Printf("applied successfully! version_id: %s\n", versionId)
+		fmt.Printf("applied successfully! version_id: %s\n", version.Id)
 	},
 }
 

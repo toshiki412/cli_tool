@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/toshiki412/cli_tool/cfg"
 )
 
 func setup(t *testing.T) string {
-	dir, err := os.MkdirTemp("", ".cli_tool_test")
+	dir, err := os.MkdirTemp("", ".cli_tool_for_test")
 	assert.NoError(t, err)
 	os.Chdir(dir)
 	cwd, err := os.Getwd()
@@ -32,17 +33,15 @@ func TestFindCurrentDir(t *testing.T) {
 
 	dir, err := FindCurrentDir()
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Errorf("file not found"), err)
+	assert.Equal(t, fmt.Errorf("config file not found"), err)
 	assert.Equal(t, "", dir)
 
 	createFile(home, "cli_tool.yaml", "")
-
 	dir, err = FindCurrentDir()
 	assert.NoError(t, err)
 	assert.Equal(t, home, dir)
 }
 
-// .cli_tool_versionファイルにあるバージョンを読む
 func TestReadVersionFile(t *testing.T) {
 	home := setup(t)
 	defer teardown(home)
@@ -55,23 +54,185 @@ func TestReadVersionFile(t *testing.T) {
 	createFile(home, "cli_tool.yaml", "")
 	assert.Equal(t, "", ReadVersionFile())
 
-	createFile(home, ".cli_tool_version", "1.2.3")
-	assert.Equal(t, "1.2.3", ReadVersionFile())
+	createFile(home, ".cli_tool_version", "123")
+	assert.Equal(t, "123", ReadVersionFile())
 
-	createFile(home, ".cli_tool_version", "1.2.3\n")
-	assert.Equal(t, "1.2.3", ReadVersionFile())
+	createFile(home, ".cli_tool_version", "456\n")
+	assert.Equal(t, "456", ReadVersionFile())
 }
 
-func TestUppdateVersionFile(t *testing.T) {
+func TestVersionFile(t *testing.T) {
 	home := setup(t)
 	defer teardown(home)
+
 	createFile(home, "cli_tool.yaml", "")
 
-	err := UpdateVersionFile("1.2.3")
+	err := UpdateVersionFile("345")
 	assert.NoError(t, err)
-	assert.Equal(t, "1.2.3", ReadVersionFile())
+	assert.Equal(t, "345", ReadVersionFile())
 
-	err = UpdateVersionFile("4.5.6\n")
+	err = UpdateVersionFile("456")
 	assert.NoError(t, err)
-	assert.Equal(t, "4.5.6", ReadVersionFile())
+	assert.Equal(t, "456", ReadVersionFile())
+}
+
+func TestDataDir(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+
+	dir, err := DataDir()
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("config file not found"), err)
+	assert.Equal(t, "", dir)
+
+	createFile(home, "cli_tool.yaml", "")
+	dir, err = DataDir()
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(home, ".cli_tool"), dir)
+}
+
+func TestDataSyncFile(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+
+	empty := cfg.DataType{
+		Version:   "1",
+		Histories: []cfg.VersionType{},
+	}
+
+	createFile(home, "cli_tool.yaml", "")
+
+	r := ReadRemoteDataFile()
+	assert.Equal(t, empty, r)
+
+	r = ReadLocalDataFile()
+	assert.Equal(t, empty, r)
+
+	localData := cfg.DataType{
+		Version: "1",
+		Histories: []cfg.VersionType{
+			{
+				Id:      "1",
+				Time:    1,
+				Message: "a",
+			}, {
+				Id:      "2",
+				Time:    2,
+				Message: "b",
+			},
+		},
+	}
+
+	WriteLocalDataFile(localData)
+
+	r = ReadLocalDataFile()
+	assert.Equal(t, localData, r)
+
+	moveData := localData.Histories[0]
+	restData := localData.Histories[1:]
+	MoveVersionToRemote(moveData)
+
+	r = ReadRemoteDataFile()
+	assert.Equal(t, cfg.DataType{
+		Version:   "1",
+		Histories: []cfg.VersionType{moveData},
+	}, r)
+
+	r = ReadLocalDataFile()
+	assert.Equal(t, cfg.DataType{
+		Version:   "1",
+		Histories: restData,
+	}, r)
+}
+
+func TestGetCurrentVersion(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+
+	createFile(home, "cli_tool.yaml", "")
+
+	v, err := GetCurrentVersion([]string{})
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, cfg.VersionType{}, v)
+
+	UpdateVersionFile("123")
+
+	v, err = GetCurrentVersion([]string{})
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, cfg.VersionType{}, v)
+
+	localData := cfg.DataType{
+		Version: "1",
+		Histories: []cfg.VersionType{
+			{
+				Id:      "123",
+				Time:    1,
+				Message: "a",
+			},
+			{
+				Id:      "456",
+				Time:    2,
+				Message: "b",
+			},
+		},
+	}
+
+	WriteLocalDataFile(localData)
+
+	v, err = GetCurrentVersion([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[0], v)
+
+	v, err = GetCurrentVersion([]string{"456"})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[1], v)
+
+	v, err = GetCurrentVersion([]string{"789"})
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, cfg.VersionType{}, v)
+
+	MoveVersionToRemote(localData.Histories[0])
+
+	v, err = GetCurrentVersion([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[0], v)
+
+	v, err = GetCurrentVersion([]string{"456"})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[1], v)
+
+	v, err = GetCurrentVersion([]string{"789"})
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, cfg.VersionType{}, v)
+
+	MoveVersionToRemote(localData.Histories[1])
+
+	v, err = GetCurrentVersion([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[0], v)
+
+	v, err = GetCurrentVersion([]string{"456"})
+	assert.NoError(t, err)
+	assert.Equal(t, localData.Histories[1], v)
+
+	v, err = GetCurrentVersion([]string{"789"})
+	assert.Error(t, err)
+	assert.Equal(t, fmt.Errorf("version not found."), err)
+	assert.Equal(t, cfg.VersionType{}, v)
+}
+
+func TestNewUUID(t *testing.T) {
+	uuid, err := NewUUID()
+	assert.NoError(t, err)
+	assert.Equal(t, 32, len(uuid))
+
+	uuid2, err := NewUUID()
+	assert.NoError(t, err)
+	assert.Equal(t, 32, len(uuid2))
+
+	assert.NotEqual(t, uuid, uuid2)
 }

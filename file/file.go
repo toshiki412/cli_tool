@@ -3,6 +3,7 @@ package file
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -102,22 +103,6 @@ func writeFile(file string, data string) error {
 	return os.WriteFile(file, []byte(data), os.ModePerm)
 }
 
-func appendFile(file string, data string) error {
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(data)
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func findVersion(versionId string, suffix string) (cfg.VersionType, error) {
 	ds := readDataFile(suffix)
 	for _, version := range ds.Histories {
@@ -128,7 +113,7 @@ func findVersion(versionId string, suffix string) (cfg.VersionType, error) {
 	return cfg.VersionType{}, fmt.Errorf("version not found")
 }
 
-func FindVersion(versionId string) (cfg.VersionType, error) {
+func findVersionLocalAndRemote(versionId string) (cfg.VersionType, error) {
 	remoteVersion, err := findVersion(versionId, "")
 	if err == nil {
 		return remoteVersion, nil
@@ -150,18 +135,22 @@ func ReadRemoteDataFile() cfg.DataType {
 	return readDataFile("")
 }
 
-func readDataFile(suffix string) cfg.DataType {
+func readDataFile(suffix string) (ds cfg.DataType) {
+	ds = cfg.DataType{
+		Version:   "1",
+		Histories: []cfg.VersionType{},
+	}
+
 	dir, err := DataDir()
-	cobra.CheckErr(err)
+	if err != nil {
+		return
+	}
 	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	content, err := readFile(file)
 	if err != nil {
-		return cfg.DataType{
-			Version:   "1",
-			Histories: []cfg.VersionType{},
-		}
+		return
 	}
-	var ds cfg.DataType
+
 	err = json.Unmarshal([]byte(content), &ds)
 	cobra.CheckErr(err)
 	return ds
@@ -178,6 +167,8 @@ func MoveVersionToRemote(version cfg.VersionType) {
 		}
 		newLocalList = append(newLocalList, ver)
 	}
+
+	local.Histories = newLocalList
 
 	remote.Histories = append(remote.Histories, version)
 	sort.Slice(remote.Histories, func(i, j int) bool {
@@ -214,7 +205,7 @@ func writeDataFile(d cfg.DataType, suffix string) error {
 	return nil
 }
 
-func GetCurrentVersion(args []string) (string, error) {
+func GetCurrentVersion(args []string) (cfg.VersionType, error) {
 	// 引数にversionIdがあるかどうか
 	var versionId = ""
 	if len(args) == 1 {
@@ -225,10 +216,15 @@ func GetCurrentVersion(args []string) (string, error) {
 	}
 
 	if versionId == "" {
-		return "", fmt.Errorf("version not found!")
+		return cfg.VersionType{}, fmt.Errorf("version not found")
 	}
 
-	return versionId, nil
+	version, err := findVersionLocalAndRemote(versionId)
+	if err != nil {
+		return cfg.VersionType{}, fmt.Errorf("version not found")
+	}
+
+	return version, nil
 }
 
 func NewUUID() (string, error) {
@@ -240,4 +236,31 @@ func NewUUID() (string, error) {
 	uuid := _uuid.String() // 新しいバージョンのuuidを振る
 	uuid = strings.Replace(uuid, "-", "", -1)
 	return uuid, nil
+}
+
+func MoveFile(sourcePath, destPath string) error {
+	inputFile, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("Couldn't open source file: %s", err)
+	}
+
+	outputFile, err := os.Create(destPath)
+	if err != nil {
+		inputFile.Close()
+		return fmt.Errorf("Couldn't open dest file: %s", err)
+	}
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	inputFile.Close()
+	if err != nil {
+		return fmt.Errorf("Writing to output file failed: %s", err)
+	}
+
+	// The copy was successful, so now delete the original file
+	err = os.Remove(sourcePath)
+	if err != nil {
+		return fmt.Errorf("Failed removing original file: %s", err)
+	}
+	return nil
 }

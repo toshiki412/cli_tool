@@ -37,7 +37,7 @@ var dumpCmd = &cobra.Command{
 		for _, target := range setting.Targets {
 			cfg.DispatchTarget(target, cfg.TargetFuncTable{
 				Mysql: func(conf cfg.TargetMysqlType) {
-					dump_mysql.Dump(dumpDir, conf)
+					dump_mysql.Dump(dump_mysql.MysqlDumpFile(dumpDir, conf), conf)
 				},
 				File: func(conf cfg.TargetFileType) {
 					dump_file.Dump(dumpDir, conf)
@@ -61,7 +61,7 @@ var dumpCmd = &cobra.Command{
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
 		dest := newVersion.CreateZipFileWithDir(dir) // .cli_tool/xxxxxxxx.zip
-		err = os.Rename(zipfile, dest)
+		err = file.MoveFile(zipfile, dest)
 		cobra.CheckErr(err)
 
 		local := file.ReadLocalDataFile()
