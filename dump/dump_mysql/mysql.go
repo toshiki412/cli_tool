@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tidb/pkg/parser"
 	"github.com/pingcap/tidb/pkg/parser/format"
 	_ "github.com/pingcap/tidb/pkg/parser/test_driver"
 
-	"github.com/JamesStewy/go-mysqldump"
+	"github.com/aliakseiz/go-mysqldump"
 
 	"github.com/briandowns/spinner"
 	"github.com/go-sql-driver/mysql"
@@ -39,16 +39,16 @@ func Dump(dumpFile string, conf cfg.TargetMysqlType) {
 	config.Net = "tcp"
 	config.Addr = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
 
-	filename := filepath.Base(dumpFile)
+	filename := strings.Replace(filepath.Base(dumpFile), ".sql", "", 1)
 	dumpDir := filepath.Dir(dumpFile)
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
-	dumper, err := mysqldump.Register(db, dumpDir, filename)
+	dumper, err := mysqldump.Register(db, dumpDir, filename, conf.Database)
 	cobra.CheckErr(err)
 
-	_, err = dumper.Dump()
+	err = dumper.Dump()
 	cobra.CheckErr(err)
 
 	dumper.Close()
@@ -79,7 +79,7 @@ func Import(dumpFile string, conf cfg.TargetMysqlType) {
 
 	stmts, _, err := p.Parse(string(content), "", "")
 	if err != nil {
-		log.Fatalf("failed to parse seed sql: %v", err)
+		fmt.Printf("failed to parse seed sql: %v\n", err)
 	}
 
 	var buf bytes.Buffer
@@ -91,7 +91,7 @@ func Import(dumpFile string, conf cfg.TargetMysqlType) {
 
 		sql := buf.String()
 		if _, err := db.Exec(sql); err != nil {
-			log.Fatalf("failed to execute sql: err=%v sql=%s", err, sql[:100])
+			fmt.Printf("failed to execute sql: err=%v sql=%s\n", err, sql[:100])
 		}
 	}
 	s.Stop()

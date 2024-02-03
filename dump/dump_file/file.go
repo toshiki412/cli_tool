@@ -15,7 +15,7 @@ import (
 
 func Dump(dumpDir string, conf cfg.TargetFileType) {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = fmt.Sprintf(" file dump ... (path: %s)", conf.Path)
+	s.Suffix = fmt.Sprintf(" file dump ... (path: %s)\n", conf.Path)
 	s.Start()
 
 	cwd, err := file.FindCurrentDir()
@@ -42,7 +42,7 @@ func Dump(dumpDir string, conf cfg.TargetFileType) {
 
 func Expand(dumpDir string, conf cfg.TargetFileType) {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = fmt.Sprintf(" restore file(s) ... (path: %s)", conf.Path)
+	s.Suffix = fmt.Sprintf(" restore file(s) ... (path: %s)\n", conf.Path)
 	s.Start()
 
 	cwd, err := file.FindCurrentDir()
