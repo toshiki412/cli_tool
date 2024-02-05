@@ -26,6 +26,11 @@ jobs:
         run: go test ./...
         shell: bash
 
+      - name: Set up Environment
+        run: |
+          export GO111MODULE=on
+          export GOFLAGS=-mod=vendor
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
