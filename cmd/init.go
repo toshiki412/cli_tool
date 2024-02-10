@@ -3,12 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+	"github.com/toshiki412/cli_tool/cfg"
 )
 
 var initCmd = &cobra.Command{
@@ -60,11 +62,13 @@ type model struct {
 	inputs     []textinput.Model
 
 	// TODO
+	targets []interface{}
 }
 
 func initialModel() model {
 	m := model{
 		screenType: SelectTargetKind,
+		targets:    make([]interface{}, 0),
 	}
 
 	return m
@@ -97,24 +101,73 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case InputMySQL:
-		cmds := make([]tea.Cmd, len(m.inputs))
-		for i := 0; i <= len(m.inputs)-1; i++ {
-			if i == m.focusIndex {
-				// Set focused state
-				cmds[i] = m.inputs[i].Focus()
-				m.inputs[i].PromptStyle = focusedStyle
-				m.inputs[i].TextStyle = focusedStyle
-				continue
+		// メッセージを受ける
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				return m, tea.Quit
+			case "up", "down", "enter":
+				s := msg.String()
+				if s == "up" {
+					m.focusIndex -= 1
+					if m.focusIndex < 0 {
+						m.focusIndex = 0
+					}
+				} else if s == "down" {
+					m.focusIndex += 1
+					if m.focusIndex > len(m.inputs)-1 {
+						m.focusIndex = len(m.inputs) - 1
+					}
+				} else if s == "enter" {
+					if m.focusIndex == len(m.inputs)-1 {
+						port, err := strconv.Atoi(m.inputs[1].Value())
+						if err != nil {
+							fmt.Println("port is invalid")
+						}
+						var t = cfg.TargetType{
+							Kind: "mysql",
+							Config: cfg.TargetMysqlType{
+								Host:     m.inputs[0].Value(),
+								Port:     port,
+								User:     m.inputs[2].Value(),
+								Password: m.inputs[3].Value(),
+								Database: m.inputs[4].Value(),
+							},
+						}
+						m.targets = append(m.targets, t)
+
+						// 次のスクリーンに行く
+						m.screenType = ConfirmAddTarget
+						m.focusIndex = 0
+						m.inputs = make([]textinput.Model, 0)
+					} else {
+						m.focusIndex += 1
+						if m.focusIndex > len(m.inputs)-1 {
+							m.focusIndex = len(m.inputs) - 1
+						}
+					}
+				}
+				cmds := make([]tea.Cmd, len(m.inputs))
+				for i := 0; i <= len(m.inputs)-1; i++ {
+					if i == m.focusIndex {
+						// Set focused state
+						cmds[i] = m.inputs[i].Focus()
+						m.inputs[i].PromptStyle = focusedStyle
+						m.inputs[i].TextStyle = focusedStyle
+						continue
+					}
+					// Remove focused state
+					m.inputs[i].Blur()
+					m.inputs[i].PromptStyle = noStyle
+					m.inputs[i].TextStyle = noStyle
+				}
+				return m, tea.Batch(cmds...)
 			}
-			// Remove focused state
-			m.inputs[i].Blur()
-			m.inputs[i].PromptStyle = noStyle
-			m.inputs[i].TextStyle = noStyle
 		}
-		return m, tea.Batch(cmds...)
+
 	default:
 		panic("invalid screenType")
-
 	}
 
 	// Handle character input and blinking
@@ -131,20 +184,26 @@ func makeMySQLInput() []textinput.Model {
 
 	t = textinput.New()
 	t.Cursor.Style = cursorStyle
-	t.CharLimit = 32
-	t.Placeholder = "Hostname"
+	t.Placeholder = "Hostname (default: localhost)"
 	t.Focus()
 	t.PromptStyle = focusedStyle
 	t.TextStyle = focusedStyle
 	inputs = append(inputs, t)
 
 	t = textinput.New()
-	t.Cursor.Style = cursorStyle
-	t.CharLimit = 32
-	t.Placeholder = "Hostname"
-	t.Focus()
-	t.PromptStyle = blurredStyle
-	t.TextStyle = blurredStyle
+	t.Placeholder = "Port (default: 3306)"
+	inputs = append(inputs, t)
+
+	t = textinput.New()
+	t.Placeholder = "User (default: root)"
+	inputs = append(inputs, t)
+
+	t = textinput.New()
+	t.Placeholder = "Password (default: empty)"
+	inputs = append(inputs, t)
+
+	t = textinput.New()
+	t.Placeholder = "Database"
 	inputs = append(inputs, t)
 
 	return inputs
