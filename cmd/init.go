@@ -64,10 +64,8 @@ type model struct {
 	inputs     []textinput.Model
 
 	// ファイル選択
-	filepicker   filepicker.Model
-	selectedFile string
-	quitting     bool
-	err          error
+	filepicker filepicker.Model
+	err        error
 
 	targets []interface{}
 }
@@ -96,45 +94,14 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.screenType {
 	case SelectTargetKind:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			case "up":
-				if m.focusIndex == 1 {
-					m.focusIndex = 0
-				}
-			case "down":
-				if m.focusIndex == 0 {
-					m.focusIndex = 1
-				}
-			case "enter":
-				if m.focusIndex == 0 {
-					m.screenType = InputMySQL
-					m.focusIndex = 0
-					m.inputs = makeMySQLInput()
-				} else {
-					m.screenType = InputFile
-					m.focusIndex = 0
-					m.inputs = make([]textinput.Model, 0)
-
-					fp := filepicker.New()
-					fp.DirAllowed = true
-					fp.CurrentDirectory, _ = os.Getwd()
-					fp.Init()
-					m.filepicker = fp
-				}
-			}
-		}
+		return updateSelectTargetKind(m, msg)
 	case InputMySQL:
-		// メッセージを受ける
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "ctrl+c", "esc":
 				return m, tea.Quit
-			case "up", "down", "enter":
+			case "enter", "up", "down":
 				s := msg.String()
 				if s == "up" {
 					m.focusIndex -= 1
@@ -143,14 +110,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else if s == "down" {
 					m.focusIndex += 1
-					if m.focusIndex > len(m.inputs)-1 {
+					if m.focusIndex >= len(m.inputs) {
 						m.focusIndex = len(m.inputs) - 1
 					}
 				} else if s == "enter" {
 					if m.focusIndex == len(m.inputs)-1 {
 						port, err := strconv.Atoi(m.inputs[1].Value())
 						if err != nil {
-							fmt.Println("port is invalid")
+							fmt.Println("invalut port")
 						}
 						var t = cfg.TargetType{
 							Kind: "mysql",
@@ -163,14 +130,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							},
 						}
 						m.targets = append(m.targets, t)
-
-						// 次のスクリーンに行く
+						// 次のスクリーンに行く。
 						m.screenType = ConfirmAddTarget
 						m.focusIndex = 1
 						m.inputs = make([]textinput.Model, 0)
 					} else {
 						m.focusIndex += 1
-						if m.focusIndex > len(m.inputs)-1 {
+						if m.focusIndex >= len(m.inputs) {
 							m.focusIndex = len(m.inputs) - 1
 						}
 					}
@@ -197,7 +163,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "ctrl+c", "esc":
-				m.quitting = true
 				return m, tea.Quit
 			}
 		case clearErrorMsg:
@@ -208,12 +173,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filepicker, cmd = m.filepicker.Update(msg)
 
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
-			m.selectedFile = path
+			cwd, _ := os.Getwd()
+			path = strings.Replace(path, cwd, "", 1)
+			fmt.Printf("path = %s\n", path)
+			var t = cfg.TargetType{
+				Kind: "file",
+				Config: cfg.TargetFileType{
+					Path: path,
+				},
+			}
+			m.targets = append(m.targets, t)
+			m.screenType = ConfirmAddTarget
+			m.focusIndex = 1
+			m.inputs = make([]textinput.Model, 0)
 		}
 
 		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
 			m.err = errors.New(path + " is not valid.")
-			m.selectedFile = ""
 			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 		}
 
@@ -250,6 +226,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle character input and blinking
 	cmd := m.updateInputs(msg)
 
+	return m, cmd
+}
+
+func updateSelectTargetKind(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			return m, tea.Quit
+		case "up":
+			if m.focusIndex == 1 {
+				m.focusIndex = 0
+			}
+		case "down":
+			if m.focusIndex == 0 {
+				m.focusIndex = 1
+			}
+		case "enter":
+			if m.focusIndex == 0 {
+				m.screenType = InputMySQL
+				m.focusIndex = 0
+				m.inputs = makeMySQLInput()
+			} else {
+				m.screenType = InputFile
+				m.focusIndex = 0
+				m.inputs = make([]textinput.Model, 0)
+				fp := filepicker.New()
+				fp.DirAllowed = true
+				fp.CurrentDirectory, _ = os.Getwd()
+				fp.Height = 10
+				cmd := fp.Init()
+				m.filepicker = fp
+				return m, cmd
+			}
+		}
+	}
+	cmd := m.updateInputs(msg)
 	return m, cmd
 }
 
@@ -303,26 +316,22 @@ func (m model) View() string {
 
 	switch m.screenType {
 	case SelectTargetKind:
-		b.WriteString("? How kind of dump target? …\n")
+		b.WriteString("? How kind of dump target? ...\n")
 		ViewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
 	case InputMySQL:
-		b.WriteString("? Input mysql setting ...\n")
+		b.WriteString("? Input mysql setting ...\n") // FIXME これだけ残る。なんとかする。
 		ViewInputs(&b, m.inputs)
 	case InputFile:
-		b.WriteString("? Select file or directory …\n")
 		if m.err != nil {
 			b.WriteString(m.filepicker.Styles.DisabledFile.Render(m.err.Error()))
-		} else if m.selectedFile == "" {
-			b.WriteString("Pick a file:")
 		} else {
-			b.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
+			b.WriteString("? Select file or directory ...\n")
 		}
 		b.WriteString("\n\n" + m.filepicker.View() + "\n")
 	case ConfirmAddTarget:
-		b.WriteString("? Add dump target?\n")
+		b.WriteString("? Add dump target more?\n")
 		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
 	}
-
 	return b.String()
 }
 
