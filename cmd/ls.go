@@ -25,6 +25,14 @@ var lsCmd = &cobra.Command{
 		// lsはlocalのバージョン履歴を表示する
 		// -rオプションがある場合はリモートのバージョン履歴も表示する
 
+		// cli_tool.yamlがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Printf("cli_tool.yaml not found! \n")
+			fmt.Printf("please run cli_tool init\n")
+			return
+		}
+
 		dataDir, err := file.DataDir()
 		cobra.CheckErr(err)
 

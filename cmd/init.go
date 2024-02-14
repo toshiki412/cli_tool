@@ -16,6 +16,7 @@ import (
 	"github.com/go-yaml/yaml"
 	"github.com/spf13/cobra"
 	"github.com/toshiki412/cli_tool/cfg"
+	"github.com/toshiki412/cli_tool/file"
 )
 
 var initCmd = &cobra.Command{
@@ -23,11 +24,16 @@ var initCmd = &cobra.Command{
 	Short: "generate cli_tool.yaml",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		_, err := file.FindCurrentDir()
+		if err == nil {
+			fmt.Println("cli_tool.yaml is already exists.")
+			return
+		}
+
 		if _, err := tea.NewProgram(initialModel()).Run(); err != nil {
 			fmt.Printf("could not start program: %s\n", err)
 			os.Exit(1)
 		}
-		// Bubble teaを使って、UIを作る。
 	},
 }
 
@@ -90,6 +96,7 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+// 各画面の入力による更新
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -140,7 +147,7 @@ func updateSelectTargetKind(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				fp := filepicker.New()
 				fp.DirAllowed = true
 				fp.CurrentDirectory, _ = os.Getwd()
-				fp.Height = 30
+				fp.Height = 10
 				cmd := fp.Init()
 				m.filepicker = fp
 				return m, cmd
@@ -213,8 +220,7 @@ func updateInputFile(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
 		cwd, _ := os.Getwd()
-		path = strings.Replace(path, cwd, "", 1)
-		fmt.Printf("path = %s\n", path)
+		path = "." + strings.Replace(path, cwd, "", 1)
 		var t = cfg.TargetType{
 			Kind: "file",
 			Config: cfg.TargetFileType{
@@ -349,6 +355,7 @@ func updateInputFocus(m model) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// MySQLの入力画面項目
 func makeMySQLInput() []textinput.Model {
 	var inputs []textinput.Model
 	var t textinput.Model
@@ -383,6 +390,7 @@ func makeMySQLInput() []textinput.Model {
 
 }
 
+// GCSの入力画面項目
 func makeGCSInput() []textinput.Model {
 	var inputs []textinput.Model
 	var t textinput.Model
@@ -405,6 +413,7 @@ func makeGCSInput() []textinput.Model {
 
 }
 
+// 入力情報の更新
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputs))
 
@@ -422,26 +431,26 @@ func (m model) View() string {
 	switch m.screenType {
 	case SelectTargetKind:
 		b.WriteString("? How kind of dump target? ...\n")
-		ViewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
+		viewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
 	case InputMySQL:
-		b.WriteString("? Input mysql setting ...\n") // FIXME これだけ残る。なんとかする。
-		ViewInputs(&b, m.inputs)
+		b.WriteString("? Input mysql setting ...\n")
+		viewInputs(&b, m.inputs)
 	case InputFile:
-		ViewFilePicker(&b, m.filepicker, m.err)
+		viewFilePicker(&b, m.filepicker, m.err)
 	case ConfirmAddTarget:
 		b.WriteString("? Add dump target more?\n")
-		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
+		viewSelect(&b, m.focusIndex, []string{"Yes", "No"})
 	case ConfirmSetupRemote:
 		b.WriteString("? Setup remote storage?\n")
-		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
+		viewSelect(&b, m.focusIndex, []string{"Yes", "No"})
 	case InputGCS:
 		b.WriteString("? Input GCS setting ...\n")
-		ViewInputs(&b, m.inputs)
+		viewInputs(&b, m.inputs)
 	}
 	return b.String()
 }
 
-func ViewFilePicker(b *strings.Builder, filepicker filepicker.Model, err error) {
+func viewFilePicker(b *strings.Builder, filepicker filepicker.Model, err error) {
 	if err != nil {
 		b.WriteString(filepicker.Styles.DisabledFile.Render(err.Error()))
 	} else {
@@ -450,7 +459,7 @@ func ViewFilePicker(b *strings.Builder, filepicker filepicker.Model, err error) 
 	b.WriteString("\n\n" + filepicker.View() + "\n")
 }
 
-func ViewSelect(b *strings.Builder, focusIndex int, texts []string) {
+func viewSelect(b *strings.Builder, focusIndex int, texts []string) {
 	for i, text := range texts {
 		if i == focusIndex {
 			b.WriteString(focusedStyle.Render(fmt.Sprintf("❯ %s\n", text)))
@@ -460,7 +469,7 @@ func ViewSelect(b *strings.Builder, focusIndex int, texts []string) {
 	}
 }
 
-func ViewInputs(b *strings.Builder, inputs []textinput.Model) {
+func viewInputs(b *strings.Builder, inputs []textinput.Model) {
 	for i := range inputs {
 		b.WriteString(inputs[i].View())
 		if i < len(inputs)-1 {

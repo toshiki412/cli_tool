@@ -1,20 +1,13 @@
 targets:
-  - kind: mysql
-    config:
-      host: localhost
-      port: 3306
-      user: root
-      password: root
-      database: sample
-  - kind: file
-    config:
-      path: "./LICENSE"
-  - kind: file
-    config:
-      path: "./.vscode"
-
+- kind: mysql
+  config:
+    host: ""
+    port: 0
+    user: ""
+    password: ""
+    database: ""
 storage:
   kind: gcs
   config:
-    bucket: clitoolbacket0001
-    dir: "test01/test02"
+    bucket: ""
+    dir: ""
