@@ -41,11 +41,12 @@ func initConfig() {
 		viper.SetConfigFile(configFile)
 	} else {
 		dir, err := file.FindCurrentDir()
-		if err == nil {
-			viper.AddConfigPath(dir)
-			viper.SetConfigType("yaml")
-			viper.SetConfigName("cli_tool")
+		if err != nil {
+			return
 		}
+		viper.AddConfigPath(dir)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("cli_tool")
 	}
 
 	err := viper.ReadInConfig()
