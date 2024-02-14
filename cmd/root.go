@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -41,23 +40,18 @@ func initConfig() {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	} else {
-		// .cli_tool.yamlがあるかどうか
 		dir, err := file.FindCurrentDir()
 		if err != nil {
-			fmt.Println("cli_tool.yaml not found!")
 			return
 		}
-
 		viper.AddConfigPath(dir)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("cli_tool")
-		fmt.Println(dir)
 	}
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	err := viper.ReadInConfig()
+	cobra.CheckErr(err)
 
-	err := viper.Unmarshal(&setting)
+	err = viper.Unmarshal(&setting)
 	cobra.CheckErr(err)
 }

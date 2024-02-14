@@ -24,6 +24,14 @@ var pushCmd = &cobra.Command{
 		// 引数があれば、そのバージョンのデータがリモートにpushされる
 		// pushすると.cli_tool_localから履歴がなくなりリモートに移動する
 
+		// cli_tool.yamlがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Printf("cli_tool.yaml not found! \n")
+			fmt.Printf("please run cli_tool init\n")
+			return
+		}
+
 		// 引数にversionIdがあるかどうか
 		version, err := file.GetCurrentVersion(args)
 		if err != nil {

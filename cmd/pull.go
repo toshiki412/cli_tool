@@ -22,6 +22,14 @@ var pullCmd = &cobra.Command{
 		// pullすると、引数が無ければ.cli_tool_versionのデータがリモートからpullされる
 		// 引数があれば、そのバージョンのデータがリモートからpullされる
 
+		// cli_tool.yamlがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Printf("cli_tool.yaml not found! \n")
+			fmt.Printf("please run cli_tool init\n")
+			return
+		}
+
 		// 引数にversionIdがあるかどうか
 		version, err := file.GetCurrentVersion(args)
 		if err != nil {

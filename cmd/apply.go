@@ -26,10 +26,11 @@ var applyCmd = &cobra.Command{
 		// .cli_tool_localに新しいバージョンの履歴が追加され、
 		// .cli_tool_versionがapplyしたバージョンに更新される
 
-		// .cli_toolがあるかどうか
+		// cli_tool.yamlがあるかどうか
 		_, err := file.FindCurrentDir()
 		if err != nil {
-			fmt.Println("cli_tool.yaml not found!")
+			fmt.Printf("cli_tool.yaml not found! \n")
+			fmt.Printf("please run cli_tool init\n")
 			return
 		}
 

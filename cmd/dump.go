@@ -28,6 +28,14 @@ var dumpCmd = &cobra.Command{
 		// .cli_tool_localに新しいバージョンの履歴が追加され、
 		// .cli_tool_versionが更新される
 
+		// cli_tool.yamlがあるかどうか
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Printf("cli_tool.yaml not found! \n")
+			fmt.Printf("please run cli_tool init\n")
+			return
+		}
+
 		// dbダンプ
 		// dumpDirにダンプしたデータが入る
 		dumpDir, err := file.MakeTempDir()
